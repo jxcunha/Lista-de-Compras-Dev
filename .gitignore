@@ -1,0 +1,14 @@
+server.py
+atualizar_precos.py
+converter_produtos.py
+verificar.py
+diagnostico_api.py
+agendar_atualizacao.py
+mateus_mais_produtos_com_imagens.json
+log_atualizacao.txt
+cert.pem
+key.pem
+cloudflared.exe
+*.bat
+__pycache__/
+*.pyc
