@@ -690,14 +690,22 @@
     let produtosDB = [];
     let acAtivo = -1;
 
+    // Índice EAN → produto para busca rápida pelo scanner
+    let eanIndex = {};
+
     async function carregarProdutos() {
       try {
-        const res = await fetch('./produtos_v2.json?v=' + Date.now());
+        const res = await fetch('./produtos_atacadao.json?v=' + Date.now());
         const data = await res.json();
         produtosDB = data.produtos || [];
-        console.log(`Produtos carregados: ${produtosDB.length}`);
+        // Monta índice de EAN para busca instantânea pelo scanner
+        eanIndex = {};
+        for (const p of produtosDB) {
+          if (p.ean) eanIndex[p.ean] = p;
+        }
+        console.log(`Produtos carregados: ${produtosDB.length} (${Object.keys(eanIndex).length} com EAN)`);
       } catch(e) {
-        console.warn('Não foi possível carregar produtos.json:', e.message);
+        console.warn('Não foi possível carregar produtos:', e.message);
       }
     }
 
@@ -1279,19 +1287,24 @@
           return;
         }
 
-        // Cruza com banco do Mateus
-        const produtoMateus = buscarNoMateus(dadosAPI.nome);
+        // 1. Busca direto pelo EAN no banco do Atacadão (mais preciso)
+        const produtoEAN = eanIndex[ean];
 
-        if (produtoMateus) {
-          // Encontrou no Mateus: usa dados completos (preço + imagem do Mateus)
-          selecionarProduto(produtoMateus);
+        if (produtoEAN) {
+          selecionarProduto(produtoEAN);
         } else {
-          // Não encontrou no Mateus: usa dados da API externa
-          $prod.value = dadosAPI.nome;
-          imagemSelecionada = dadosAPI.imagem || '';
-          unidadeSelecionada = dadosAPI.unidade || '';
-          if (dadosAPI.preco > 0) {
-            document.getElementById('preco').value = dadosAPI.preco.toFixed(2);
+          // 2. Tenta por nome se não achou pelo EAN
+          const produtoNome = buscarNoMateus(dadosAPI.nome);
+          if (produtoNome) {
+            selecionarProduto(produtoNome);
+          } else {
+            // 3. Usa dados da API externa (Open Food Facts)
+            $prod.value = dadosAPI.nome;
+            imagemSelecionada = dadosAPI.imagem || '';
+            unidadeSelecionada = dadosAPI.unidade || '';
+            if (dadosAPI.preco > 0) {
+              document.getElementById('preco').value = dadosAPI.preco.toFixed(2);
+            }
           }
         }
 
