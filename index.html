@@ -1269,9 +1269,9 @@
       $prod.disabled = true;
 
       try {
-        const nomeProduto = await buscarNomePorEAN(ean);
+        const dadosAPI = await buscarDadosPorEAN(ean);
 
-        if (!nomeProduto) {
+        if (!dadosAPI) {
           $prod.disabled = false;
           $prod.value = '';
           $prod.placeholder = 'EAN ' + ean + ' nao encontrado';
@@ -1280,14 +1280,19 @@
         }
 
         // Cruza com banco do Mateus
-        const produtoMateus = buscarNoMateus(nomeProduto);
+        const produtoMateus = buscarNoMateus(dadosAPI.nome);
 
         if (produtoMateus) {
+          // Encontrou no Mateus: usa dados completos (preço + imagem do Mateus)
           selecionarProduto(produtoMateus);
         } else {
-          $prod.value = nomeProduto;
-          imagemSelecionada = '';
-          unidadeSelecionada = '';
+          // Não encontrou no Mateus: usa dados da API externa
+          $prod.value = dadosAPI.nome;
+          imagemSelecionada = dadosAPI.imagem || '';
+          unidadeSelecionada = dadosAPI.unidade || '';
+          if (dadosAPI.preco > 0) {
+            document.getElementById('preco').value = dadosAPI.preco.toFixed(2);
+          }
         }
 
       } catch (e) {
@@ -1300,7 +1305,7 @@
       $prod.disabled = false;
     }
 
-    async function buscarNomePorEAN(ean) {
+    async function buscarDadosPorEAN(ean) {
       try {
         const resp = await fetch(
           'https://world.openfoodfacts.org/api/v0/product/' + ean + '.json',
@@ -1308,13 +1313,21 @@
         );
         const data = await resp.json();
         if (data.status === 1 && data.product) {
-          return (
-            data.product.product_name_pt ||
-            data.product.product_name ||
-            data.product.generic_name_pt ||
-            data.product.generic_name ||
-            null
-          );
+          const p = data.product;
+          const nome = p.product_name_pt || p.product_name || p.generic_name_pt || p.generic_name || null;
+          if (!nome) return null;
+
+          // Pega imagem do produto se disponível
+          const imagem = p.image_front_small_url || p.image_small_url || p.image_url || '';
+
+          // Tenta extrair quantidade/unidade
+          let unidade = '';
+          if (p.quantity) {
+            const match = p.quantity.match(/(\d+)\s*(g|kg|ml|l|un)/i);
+            if (match) unidade = match[1] + match[2].toLowerCase();
+          }
+
+          return { nome, imagem, unidade, preco: 0 };
         }
         return null;
       } catch (e) {
