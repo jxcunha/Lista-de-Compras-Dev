@@ -738,14 +738,13 @@
           <button id="btnScan" title="Escanear código de barras" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:34px; height:34px; border:none; background:transparent; cursor:pointer; font-size:20px; z-index:2; padding:0;">📷</button>
           <div class="autocomplete-list" id="autocompleteList"></div>
         </div>
-        <input type="text" id="quantidade" placeholder="Quantidade" class="input-quantidade" />
       </div>
 
+      <!-- campos ocultos mantidos para compatibilidade com incluirItem -->
+      <input type="hidden" id="quantidade" />
+      <input type="hidden" id="preco" />
+
       <div class="preco-row">
-        <div class="preco-wrapper" style="flex:1;">
-          <span class="preco-prefix">R$</span>
-          <input type="number" id="preco" placeholder="0,00" min="0" step="0.01" />
-        </div>
         <input type="text" id="categoria" placeholder="Categoria (opcional)" style="flex:1;" />
         <button id="btnBuscar" class="btn-icon" title="Filtrar por categoria">🔍</button>
       </div>
