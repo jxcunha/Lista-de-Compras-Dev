@@ -1,0 +1,60 @@
+{
+  "produtos": [
+    {
+      "ean": "7891089100025",
+      "n": "Azeitona La Viole",
+      "b": "",
+      "p": 13.90,
+      "loja": "Fribal",
+      "data": "2026-04-04"
+    },
+    {
+      "ean": "7898598810223",
+      "n": "Tomate Seco Tozzi",
+      "b": "Tozzi",
+      "p": 10.90,
+      "loja": "Fribal",
+      "data": "2026-04-04"
+    },
+    {
+      "ean": "7896074601068",
+      "n": "Pão de Queijo Forno de Minas",
+      "b": "Forno de Minas",
+      "p": 19.90,
+      "loja": "Fribal",
+      "data": "2026-04-04"
+    },
+    {
+      "ean": "7894904555659",
+      "n": "Salame Italiano Seara",
+      "b": "Seara",
+      "p": 15.90,
+      "loja": "Fribal",
+      "data": "2026-04-04"
+    },
+    {
+      "ean": "7898205924909",
+      "n": "Queijo Mussarela Verde Campo",
+      "b": "Verde Campo",
+      "p": 17.90,
+      "loja": "Fribal",
+      "data": "2026-04-04"
+    },
+    {
+      "ean": "7898552260286",
+      "n": "Papel Manteiga Royalpack",
+      "b": "Royalpack",
+      "p": 4.75,
+      "loja": "Fribal",
+      "data": "2026-04-04"
+    },
+    {
+      "ean": "0000078936683",
+      "n": "Cerveja Heineken",
+      "b": "Heineken",
+      "p": 7.49,
+      "loja": "Fribal",
+      "data": "2026-04-04"
+    }
+  ]
+}

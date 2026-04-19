@@ -691,19 +691,29 @@
     let acAtivo = -1;
 
     // Índice EAN → produto para busca rápida pelo scanner
-    let eanIndex = {};
+    let eanIndex = {};       // EAN → produto (Atacadão)
+    let eanNotasIndex = {};  // EAN → produto (notas fiscais - EAN real)
 
     async function carregarProdutos() {
       try {
+        // Banco do Atacadão (autocomplete)
         const res = await fetch('./produtos_atacadao.json?v=' + Date.now());
         const data = await res.json();
         produtosDB = data.produtos || [];
-        // Monta índice de EAN para busca instantânea pelo scanner
         eanIndex = {};
         for (const p of produtosDB) {
           if (p.ean) eanIndex[p.ean] = p;
         }
-        console.log(`Produtos carregados: ${produtosDB.length} (${Object.keys(eanIndex).length} com EAN)`);
+
+        // Banco de notas fiscais (EAN-13 real)
+        const resNotas = await fetch('./produtos_notas.json?v=' + Date.now());
+        const dataNotas = await resNotas.json();
+        eanNotasIndex = {};
+        for (const p of (dataNotas.produtos || [])) {
+          if (p.ean) eanNotasIndex[p.ean] = p;
+        }
+
+        console.log(`Produtos: ${produtosDB.length} Atacadão | ${Object.keys(eanNotasIndex).length} notas fiscais`);
       } catch(e) {
         console.warn('Não foi possível carregar produtos:', e.message);
       }
@@ -1287,23 +1297,29 @@
           return;
         }
 
-        // 1. Busca direto pelo EAN no banco do Atacadão (mais preciso)
-        const produtoEAN = eanIndex[ean];
+        // 1. Busca nas notas fiscais (EAN-13 real — mais preciso)
+        const produtoNota = eanNotasIndex[ean];
 
-        if (produtoEAN) {
-          selecionarProduto(produtoEAN);
+        if (produtoNota) {
+          selecionarProduto(produtoNota);
         } else {
-          // 2. Tenta por nome se não achou pelo EAN
-          const produtoNome = buscarNoMateus(dadosAPI.nome);
-          if (produtoNome) {
-            selecionarProduto(produtoNome);
+          // 2. Busca no banco do Atacadão pelo EAN interno
+          const produtoEAN = eanIndex[ean];
+          if (produtoEAN) {
+            selecionarProduto(produtoEAN);
           } else {
-            // 3. Usa dados da API externa (Open Food Facts)
-            $prod.value = dadosAPI.nome;
-            imagemSelecionada = dadosAPI.imagem || '';
-            unidadeSelecionada = dadosAPI.unidade || '';
-            if (dadosAPI.preco > 0) {
-              document.getElementById('preco').value = dadosAPI.preco.toFixed(2);
+            // 3. Tenta por nome
+            const produtoNome = buscarNoMateus(dadosAPI.nome);
+            if (produtoNome) {
+              selecionarProduto(produtoNome);
+            } else {
+              // 4. Usa dados da Open Food Facts
+              $prod.value = dadosAPI.nome;
+              imagemSelecionada = dadosAPI.imagem || '';
+              unidadeSelecionada = dadosAPI.unidade || '';
+              if (dadosAPI.preco > 0) {
+                document.getElementById('preco').value = dadosAPI.preco.toFixed(2);
+              }
             }
           }
         }
