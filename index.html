@@ -1160,10 +1160,8 @@
     }
 
     function fecharSugestoes() {
-      if (_overlayInput) {
-        $produto.value = _overlayInput.value;
-        _overlayInput = null;
-      }
+      _overlayInput = null;
+      $produto.value = '';   // limpa o campo ao voltar
       $acList.classList.remove('aberto');
       $acList.innerHTML = '';
       acAtivo = -1;
