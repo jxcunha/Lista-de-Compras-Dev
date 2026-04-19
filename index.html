@@ -227,6 +227,32 @@
     .ac-loja-badge[data-loja="Atacadão"]{ background: rgba(220,38,38,0.80); }
     .ac-loja-badge[data-loja="Mateus"]  { background: rgba(22,163,74,0.80); }
     .ac-loja-badge[data-loja="Fribal"]  { background: rgba(37,99,235,0.80); }
+
+    /* Separador entre grupos de produtos */
+    .ac-grupo-sep{
+      grid-column: 1 / -1;
+      height: 1px;
+      background: #e5e7eb;
+      margin: 4px 0;
+    }
+
+    /* Card do mais barato no grupo fica com borda verde */
+    .autocomplete-item.ac-melhor-preco{
+      border: 2px solid #16a34a;
+    }
+    .ac-melhor-badge{
+      position: absolute;
+      bottom: 42px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #16a34a;
+      color: #fff;
+      font-size: 8px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
     .autocomplete-item .ac-thumb{
       width: 100%;
       height: 100%;
@@ -815,17 +841,46 @@
       }
     }
 
+    // Normaliza nome: minúsculo, sem acento, sem tamanhos (330ml, 1kg...)
+    function normalizarNome(nome) {
+      return nome.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/\b\d+\s*(ml|g|kg|l|lt|un|cx|pct|uni|gramas?|litros?)\b/gi, '')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, ' ').trim();
+    }
+
     function buscarProdutos(termo) {
       if (!termo || termo.length < 2) return [];
-      const t = termo.toLowerCase();
-      const resultados = [];
-      for (const p of produtosDB) {
-        if (p.n.toLowerCase().includes(t)) {
-          resultados.push(p);
-          if (resultados.length >= 16) break;
-        }
+      const t = termo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+      // 1. Coleta todos que batem
+      const todos = produtosDB.filter(p =>
+        p.n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(t)
+      ).slice(0, 60);
+
+      // 2. Agrupa por nome normalizado
+      const grupos = new Map();
+      for (const p of todos) {
+        const chave = normalizarNome(p.n);
+        if (!grupos.has(chave)) grupos.set(chave, []);
+        grupos.get(chave).push(p);
       }
-      return resultados;
+
+      // 3. Monta resultado: dentro de cada grupo ordena por preço (menor primeiro)
+      //    e coloca os grupos lado a lado
+      const resultado = [];
+      for (const [, itens] of grupos) {
+        itens.sort((a, b) => (a.p || 999) - (b.p || 999));
+        resultado.push(...itens);
+        if (resultado.length >= 32) break;
+      }
+      return resultado;
+    }
+
+    // Detecta se dois produtos consecutivos são do mesmo grupo (para visual)
+    function mesmaPalavraChave(a, b) {
+      return a && b && normalizarNome(a.n) === normalizarNome(b.n);
     }
 
     function formatarPreco(valor) {
@@ -857,13 +912,33 @@
       header.appendChild(termo);
       $acList.appendChild(header);
 
-      // Grade de produtos
+      // Grade de produtos (agrupa similares lado a lado)
       const grid = document.createElement('div');
       grid.className = 'ac-grid';
 
+      // Identifica grupos para destacar o mais barato e inserir separadores
+      // resultados já vêm ordenados por grupo (buscarProdutos) com menor preço primeiro
+      let grupoAtual = null;
+      let primeiroDoGrupo = true;
+
       resultados.forEach((p, i) => {
+        const chaveGrupo = normalizarNome(p.n);
+        const novoGrupo  = chaveGrupo !== grupoAtual;
+
+        // Separador entre grupos (exceto antes do primeiro)
+        if (novoGrupo && grupoAtual !== null) {
+          const sep = document.createElement('div');
+          sep.className = 'ac-grupo-sep';
+          grid.appendChild(sep);
+        }
+        if (novoGrupo) { grupoAtual = chaveGrupo; primeiroDoGrupo = true; }
+
+        // Verifica se tem mais de 1 item no grupo (para mostrar badge "mais barato")
+        const grupoTemVarios = resultados.filter(x => normalizarNome(x.n) === chaveGrupo).length > 1;
+        const eMaisBarato    = primeiroDoGrupo && grupoTemVarios && p.p > 0;
+
         const card = document.createElement('div');
-        card.className = 'autocomplete-item';
+        card.className = 'autocomplete-item' + (eMaisBarato ? ' ac-melhor-preco' : '');
         card.dataset.index = i;
 
         // Imagem
@@ -888,13 +963,22 @@
           icon.textContent = '🛒';
           imgWrap.appendChild(icon);
         }
-        // Badge da loja (topo da imagem)
+
+        // Badge da loja (topo esquerdo)
         if (p.loja) {
           const badge = document.createElement('span');
           badge.className = 'ac-loja-badge';
           badge.textContent = p.loja;
           badge.dataset.loja = p.loja;
           imgWrap.appendChild(badge);
+        }
+
+        // Badge "Mais barato" (sobre o botão +)
+        if (eMaisBarato) {
+          const mb = document.createElement('span');
+          mb.className = 'ac-melhor-badge';
+          mb.textContent = '✓ mais barato';
+          imgWrap.appendChild(mb);
         }
 
         // Botão +
@@ -923,6 +1007,7 @@
         card.addEventListener('touchend',  (e) => { e.preventDefault(); selecionarProduto(p); });
 
         grid.appendChild(card);
+        primeiroDoGrupo = false;
       });
 
       $acList.appendChild(grid);
@@ -963,9 +1048,8 @@
       }
     });
 
-    $produto.addEventListener('blur', () => {
-      setTimeout(fecharSugestoes, 150);
-    });
+    // Overlay só fecha com o botão ← ou ao selecionar produto
+    // (blur removido para não fechar ao rolar)
 
     // ── Estado da lista ───────────────────────────────────────
     let itensCache = [];
