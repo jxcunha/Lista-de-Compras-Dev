@@ -32,7 +32,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // ── Cache ──────────────────────────────────────────────────────
-const CACHE_NAME = 'lista-compras-cache-v8';
+const CACHE_NAME = 'lista-compras-cache-v9';
 const URLS_TO_CACHE = ['./Carrinho.png', './manifest.json'];
 
 self.addEventListener('install', (event) => {
