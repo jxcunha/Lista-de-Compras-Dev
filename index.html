@@ -299,6 +299,151 @@
       object-fit: contain;
       padding: 6px;
     }
+
+    /* ── Tela de detalhe do produto ── */
+    #produtoDetalhe{
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #f9fafb;
+      z-index: 900;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      flex-direction: column;
+    }
+    #produtoDetalhe.aberto{ display: flex; }
+
+    .pd-header{
+      position: sticky;
+      top: 0;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      z-index: 10;
+    }
+    .pd-voltar{
+      background: none; border: none;
+      font-size: 22px; cursor: pointer;
+      color: #333; padding: 0 4px; line-height: 1;
+      flex-shrink: 0;
+    }
+    .pd-titulo{
+      font-size: 17px; font-weight: 700;
+      color: #111; flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .pd-loja-bar{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px 0;
+    }
+    .pd-loja-badge{
+      font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px;
+      color: #fff; text-transform: uppercase;
+      background: rgba(0,0,0,0.5);
+    }
+    .pd-loja-badge[data-loja="Atacadão"]{ background:#dc2626; }
+    .pd-loja-badge[data-loja="Mateus"]  { background:#16a34a; }
+    .pd-loja-badge[data-loja="Fribal"]  { background:#2563eb; }
+
+    .pd-img-wrap{
+      display: flex; align-items: center; justify-content: center;
+      background: #fff;
+      margin: 12px 16px;
+      border-radius: 16px;
+      min-height: 220px;
+      overflow: hidden;
+    }
+    .pd-img-wrap img{
+      max-width: 100%; max-height: 240px;
+      object-fit: contain; padding: 12px;
+    }
+    .pd-no-img{ font-size: 64px; }
+
+    .pd-info{
+      background: #fff;
+      border-radius: 16px;
+      margin: 0 16px 12px;
+      padding: 16px;
+    }
+    .pd-nome{
+      font-size: 18px; font-weight: 700;
+      color: #111; margin-bottom: 6px; line-height: 1.3;
+    }
+    .pd-preco{
+      font-size: 26px; font-weight: 800;
+      color: #111; margin-bottom: 4px;
+    }
+    .pd-unidade{
+      font-size: 13px; color: #6b7280; margin-bottom: 8px;
+    }
+    .pd-ean{
+      font-size: 12px; color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .pd-footer{
+      position: sticky;
+      bottom: 0;
+      background: #fff;
+      border-top: 1px solid #e5e7eb;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .pd-total-row{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px; color: #6b7280;
+    }
+    .pd-total-val{
+      font-size: 18px; font-weight: 700; color: #111;
+    }
+    .pd-qty-row{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .pd-qty-btn{
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 22px; font-weight: 300;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pd-qty-btn:active{ background:#333; }
+    .pd-qty-val{
+      font-size: 28px; font-weight: 700;
+      min-width: 40px; text-align: center;
+    }
+    .pd-btn-add{
+      width: 100%;
+      padding: 15px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 17px; font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pd-btn-add:active{ background: #c2410c; }
+    .pd-btn-add.adicionado{
+      background: #16a34a;
+    }
     .ac-no-img{
       font-size: 28px;
       color: #d1d5db;
@@ -762,6 +907,37 @@
     </section>
   </main>
 
+  <!-- Tela de detalhe do produto -->
+  <div id="produtoDetalhe">
+    <div class="pd-header">
+      <button class="pd-voltar" id="pdVoltar">←</button>
+      <span class="pd-titulo" id="pdTitulo">Produto</span>
+    </div>
+    <div class="pd-loja-bar">
+      <span class="pd-loja-badge" id="pdLojaBadge"></span>
+    </div>
+    <div class="pd-img-wrap" id="pdImgWrap"></div>
+    <div class="pd-info">
+      <div class="pd-nome" id="pdNome"></div>
+      <div class="pd-preco" id="pdPreco"></div>
+      <div class="pd-unidade" id="pdUnidade"></div>
+      <div class="pd-ean" id="pdEan"></div>
+    </div>
+    <div style="flex:1;"></div>
+    <div class="pd-footer">
+      <div class="pd-total-row">
+        <span>total</span>
+        <span class="pd-total-val" id="pdTotal">R$ 0,00</span>
+      </div>
+      <div class="pd-qty-row">
+        <button class="pd-qty-btn" id="pdMinus">−</button>
+        <span class="pd-qty-val" id="pdQtyVal">1</span>
+        <button class="pd-qty-btn" id="pdPlus">+</button>
+      </div>
+      <button class="pd-btn-add" id="pdBtnAdd">+ Adicionar à lista</button>
+    </div>
+  </div>
+
   <!-- Modal Scanner de código de barras -->
   <div id="scannerModal" class="scanner-overlay">
     <div class="scanner-box">
@@ -1074,6 +1250,17 @@
         info.appendChild(qtyRow);
         card.appendChild(info);
 
+        // Toque na imagem ou nome → abre tela de detalhe
+        const abreDetalhe = (e) => {
+          if (_touchMoved) return;
+          e.preventDefault(); e.stopPropagation();
+          abrirDetalhe(p);
+        };
+        imgWrap.addEventListener('mousedown', (e) => { if (e.target === addBtn) return; });
+        imgWrap.addEventListener('touchend',  (e) => { if (e.target === addBtn || e.target.closest('.ac-add-btn')) return; abreDetalhe(e); });
+        nome.addEventListener('touchend', abreDetalhe);
+        preco.addEventListener('touchend', abreDetalhe);
+
         grid.appendChild(card);
         primeiroDoGrupo = false;
       });
@@ -1170,6 +1357,107 @@
     let imagemSelecionada = '';
     let unidadeSelecionada = '';
     let produtoIdSelecionado = '';
+
+    // ── Tela de detalhe do produto ─────────────────────────
+    const $detalhe    = document.getElementById('produtoDetalhe');
+    const $pdVoltar   = document.getElementById('pdVoltar');
+    const $pdTitulo   = document.getElementById('pdTitulo');
+    const $pdLoja     = document.getElementById('pdLojaBadge');
+    const $pdImgWrap  = document.getElementById('pdImgWrap');
+    const $pdNome     = document.getElementById('pdNome');
+    const $pdPreco    = document.getElementById('pdPreco');
+    const $pdUnidade  = document.getElementById('pdUnidade');
+    const $pdEan      = document.getElementById('pdEan');
+    const $pdTotal    = document.getElementById('pdTotal');
+    const $pdQtyVal   = document.getElementById('pdQtyVal');
+    const $pdMinus    = document.getElementById('pdMinus');
+    const $pdPlus     = document.getElementById('pdPlus');
+    const $pdBtnAdd   = document.getElementById('pdBtnAdd');
+
+    let _pdProduto  = null;   // produto atual no detalhe
+    let _pdQtd      = 1;
+    let _pdItemKey  = null;   // chave Firebase se já adicionado
+
+    function atualizarTotalDetalhe() {
+      const total = (_pdProduto?.p || 0) * _pdQtd;
+      $pdTotal.textContent = total > 0 ? formatarPreco(total) : 'R$ 0,00';
+    }
+
+    function abrirDetalhe(p) {
+      _pdProduto = p;
+      _pdQtd     = 1;
+      _pdItemKey = null;
+
+      // Header
+      $pdTitulo.textContent = p.n;
+
+      // Loja badge
+      $pdLoja.textContent   = p.loja || '';
+      $pdLoja.dataset.loja  = p.loja || '';
+      $pdLoja.style.display = p.loja ? '' : 'none';
+
+      // Imagem
+      $pdImgWrap.innerHTML = '';
+      if (p.img || p.i) {
+        const img = document.createElement('img');
+        img.src = p.img || p.i;
+        img.alt = p.n;
+        img.onerror = () => { $pdImgWrap.innerHTML = '<span class="pd-no-img">🛒</span>'; };
+        $pdImgWrap.appendChild(img);
+      } else {
+        $pdImgWrap.innerHTML = '<span class="pd-no-img">🛒</span>';
+      }
+
+      // Info
+      $pdNome.textContent    = p.n + (p.b ? ` — ${p.b}` : '');
+      $pdPreco.textContent   = p.p > 0 ? formatarPreco(p.p) + (p.u ? `/${p.u}` : '') : 'Sem preço';
+      $pdUnidade.textContent = p.u ? `Unidade: ${p.u}` : '';
+      $pdEan.textContent     = p.ean ? `EAN: ${p.ean}` : '';
+
+      // Qty
+      $pdQtyVal.textContent = '1';
+      atualizarTotalDetalhe();
+
+      // Botão estado inicial
+      $pdBtnAdd.textContent = '+ Adicionar à lista';
+      $pdBtnAdd.classList.remove('adicionado');
+
+      $detalhe.classList.add('aberto');
+    }
+
+    function fecharDetalhe() {
+      $detalhe.classList.remove('aberto');
+      _pdProduto = null;
+      _pdItemKey = null;
+    }
+
+    $pdVoltar.addEventListener('click', fecharDetalhe);
+    $pdVoltar.addEventListener('touchend', (e) => { e.preventDefault(); fecharDetalhe(); });
+
+    $pdMinus.addEventListener('click', () => {
+      if (_pdQtd > 1) { _pdQtd--; $pdQtyVal.textContent = _pdQtd; atualizarTotalDetalhe(); }
+    });
+    $pdPlus.addEventListener('click', () => {
+      _pdQtd++; $pdQtyVal.textContent = _pdQtd; atualizarTotalDetalhe();
+    });
+
+    $pdBtnAdd.addEventListener('click', async () => {
+      if (!_pdProduto) return;
+      if (_pdItemKey) {
+        // Já adicionado → remove
+        try { await remove(ref(db, `${caminhoLista()}/${_pdItemKey}`)); } catch(e) {}
+        _pdItemKey = null;
+        $pdBtnAdd.textContent = '+ Adicionar à lista';
+        $pdBtnAdd.classList.remove('adicionado');
+      } else {
+        // Adiciona
+        try {
+          _pdItemKey = await adicionarDoCard(_pdProduto, _pdQtd);
+          $pdBtnAdd.textContent = '✓ Adicionado';
+          $pdBtnAdd.classList.add('adicionado');
+        } catch(e) { console.error(e); }
+      }
+    });
 
     function selecionarProduto(p, qtd = 1) {
       $produto.value = p.n;
