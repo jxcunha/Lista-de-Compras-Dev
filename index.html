@@ -245,12 +245,35 @@
     .ac-loja-badge[data-loja="Mateus"]  { background: rgba(22,163,74,0.80); }
     .ac-loja-badge[data-loja="Fribal"]  { background: rgba(37,99,235,0.80); }
 
-    /* Separador entre grupos de produtos */
-    .ac-grupo-sep{
-      grid-column: 1 / -1;
-      height: 1px;
-      background: #e5e7eb;
-      margin: 4px 0;
+    /* Qty controls no card */
+    .ac-qty-row{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 4px 6px 7px;
+    }
+    .ac-qty-btn{
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 1.5px solid #d1d5db;
+      background: #f3f4f6;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #374151;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .ac-qty-btn:active{ background: #e5e7eb; }
+    .ac-qty-val{
+      font-size: 14px;
+      font-weight: 700;
+      min-width: 20px;
+      text-align: center;
+      color: #111;
     }
 
     /* Card do mais barato no grupo fica com borda verde */
@@ -922,15 +945,13 @@
       resultados.forEach((p, i) => {
         const chaveGrupo = normalizarNome(p.n);
         const novoGrupo  = chaveGrupo !== grupoAtual;
-        if (novoGrupo && grupoAtual !== null) {
-          const sep = document.createElement('div');
-          sep.className = 'ac-grupo-sep';
-          grid.appendChild(sep);
-        }
         if (novoGrupo) { grupoAtual = chaveGrupo; primeiroDoGrupo = true; }
 
         const grupoTemVarios = resultados.filter(x => normalizarNome(x.n) === chaveGrupo).length > 1;
         const eMaisBarato    = primeiroDoGrupo && grupoTemVarios && p.p > 0;
+
+        // Quantidade local deste card (começa em 1)
+        let cardQtd = 1;
 
         const card = document.createElement('div');
         card.className = 'autocomplete-item' + (eMaisBarato ? ' ac-melhor-preco' : '');
@@ -970,12 +991,17 @@
           mb.textContent = '✓ mais barato';
           imgWrap.appendChild(mb);
         }
+        // Botão + (adiciona à lista com a qty atual)
         const addBtn = document.createElement('div');
         addBtn.className = 'ac-add-btn';
         addBtn.textContent = '+';
+        const doAdd = (e) => { e.preventDefault(); e.stopPropagation(); selecionarProduto(p, cardQtd); };
+        addBtn.addEventListener('mousedown', doAdd);
+        addBtn.addEventListener('touchend',  doAdd);
         imgWrap.appendChild(addBtn);
         card.appendChild(imgWrap);
 
+        // Preço e nome
         const info = document.createElement('div');
         info.className = 'ac-card-info';
         const preco = document.createElement('span');
@@ -986,10 +1012,33 @@
         nome.textContent = p.n + (p.b ? ` ${p.b}` : '');
         info.appendChild(preco);
         info.appendChild(nome);
-        card.appendChild(info);
 
-        card.addEventListener('mousedown', (e) => { e.preventDefault(); selecionarProduto(p); });
-        card.addEventListener('touchend',  (e) => { e.preventDefault(); selecionarProduto(p); });
+        // Controle de quantidade [−] [1] [+]
+        const qtyRow = document.createElement('div');
+        qtyRow.className = 'ac-qty-row';
+        const btnMinus = document.createElement('button');
+        btnMinus.className = 'ac-qty-btn';
+        btnMinus.textContent = '−';
+        const qtyVal = document.createElement('span');
+        qtyVal.className = 'ac-qty-val';
+        qtyVal.textContent = '1';
+        const btnPlus = document.createElement('button');
+        btnPlus.className = 'ac-qty-btn';
+        btnPlus.textContent = '+';
+
+        const atualizar = () => { qtyVal.textContent = cardQtd; };
+        const decrementa = (e) => { e.preventDefault(); e.stopPropagation(); if (cardQtd > 1) { cardQtd--; atualizar(); } };
+        const incrementa = (e) => { e.preventDefault(); e.stopPropagation(); cardQtd++; atualizar(); };
+        btnMinus.addEventListener('mousedown', decrementa);
+        btnMinus.addEventListener('touchend',  decrementa);
+        btnPlus.addEventListener('mousedown',  incrementa);
+        btnPlus.addEventListener('touchend',   incrementa);
+
+        qtyRow.appendChild(btnMinus);
+        qtyRow.appendChild(qtyVal);
+        qtyRow.appendChild(btnPlus);
+        info.appendChild(qtyRow);
+        card.appendChild(info);
 
         grid.appendChild(card);
         primeiroDoGrupo = false;
@@ -1039,6 +1088,11 @@
         renderGrid(novos);
       });
 
+      // "Retorno" recolhe o teclado — toque no campo para reabrir
+      overlayInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); overlayInput.blur(); }
+      });
+
       const btnLimpar = document.createElement('button');
       btnLimpar.className = 'ac-overlay-limpar';
       btnLimpar.textContent = '✕';
@@ -1085,14 +1139,14 @@
     let unidadeSelecionada = '';
     let produtoIdSelecionado = '';
 
-    function selecionarProduto(p) {
+    function selecionarProduto(p, qtd = 1) {
       $produto.value = p.n;
       if (p.p > 0) $preco.value = p.p.toFixed(2);
+      $qtd.value = qtd > 0 ? String(qtd) : '1';
       imagemSelecionada    = p.img || p.i || '';
       unidadeSelecionada   = p.u || '';
       produtoIdSelecionado = p.id ? String(p.id) : '';
       fecharSugestoes();
-      $qtd.focus();
     }
 
     $produto.addEventListener('input', () => {
