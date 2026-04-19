@@ -711,9 +711,11 @@
         eanNotasIndex = {};
         for (const p of (dataNotas.produtos || [])) {
           if (p.ean) eanNotasIndex[p.ean] = p;
+          // Adiciona ao autocomplete também
+          produtosDB.push(p);
         }
 
-        console.log(`Produtos: ${produtosDB.length} Atacadão | ${Object.keys(eanNotasIndex).length} notas fiscais`);
+        console.log(`Produtos Atacadão: ${produtosDB.length - Object.keys(eanNotasIndex).length} | Notas fiscais: ${Object.keys(eanNotasIndex).length}`);
       } catch(e) {
         console.warn('Não foi possível carregar produtos:', e.message);
       }
