@@ -991,11 +991,20 @@
           mb.textContent = '✓ mais barato';
           imgWrap.appendChild(mb);
         }
+        // Detecta scroll para não confundir com toque intencional
+        let _touchMoved = false;
+        card.addEventListener('touchstart', () => { _touchMoved = false; }, { passive: true });
+        card.addEventListener('touchmove',  () => { _touchMoved = true;  }, { passive: true });
+
         // Botão + (adiciona à lista com a qty atual)
         const addBtn = document.createElement('div');
         addBtn.className = 'ac-add-btn';
         addBtn.textContent = '+';
-        const doAdd = (e) => { e.preventDefault(); e.stopPropagation(); selecionarProduto(p, cardQtd); };
+        const doAdd = (e) => {
+          if (_touchMoved) return;   // era scroll, ignora
+          e.preventDefault(); e.stopPropagation();
+          selecionarProduto(p, cardQtd);
+        };
         addBtn.addEventListener('mousedown', doAdd);
         addBtn.addEventListener('touchend',  doAdd);
         imgWrap.appendChild(addBtn);
@@ -1027,8 +1036,16 @@
         btnPlus.textContent = '+';
 
         const atualizar = () => { qtyVal.textContent = cardQtd; };
-        const decrementa = (e) => { e.preventDefault(); e.stopPropagation(); if (cardQtd > 1) { cardQtd--; atualizar(); } };
-        const incrementa = (e) => { e.preventDefault(); e.stopPropagation(); cardQtd++; atualizar(); };
+        const decrementa = (e) => {
+          if (_touchMoved) return;
+          e.preventDefault(); e.stopPropagation();
+          if (cardQtd > 1) { cardQtd--; atualizar(); }
+        };
+        const incrementa = (e) => {
+          if (_touchMoved) return;
+          e.preventDefault(); e.stopPropagation();
+          cardQtd++; atualizar();
+        };
         btnMinus.addEventListener('mousedown', decrementa);
         btnMinus.addEventListener('touchend',  decrementa);
         btnPlus.addEventListener('mousedown',  incrementa);
