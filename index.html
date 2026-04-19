@@ -1000,10 +1000,28 @@
         const addBtn = document.createElement('div');
         addBtn.className = 'ac-add-btn';
         addBtn.textContent = '+';
-        const doAdd = (e) => {
-          if (_touchMoved) return;   // era scroll, ignora
+        let _itemKey = null; // chave Firebase do item adicionado
+
+        const doAdd = async (e) => {
+          if (_touchMoved) return;
           e.preventDefault(); e.stopPropagation();
-          adicionarDoCard(p, cardQtd, addBtn); // overlay fica aberto
+
+          if (_itemKey) {
+            // Já adicionado → remove da lista e volta para "+"
+            try {
+              await remove(ref(db, `${caminhoLista()}/${_itemKey}`));
+            } catch(err) { console.error(err); }
+            _itemKey = null;
+            addBtn.textContent = '+';
+            addBtn.style.background = '';
+          } else {
+            // Adiciona → fica verde ✓
+            try {
+              _itemKey = await adicionarDoCard(p, cardQtd);
+              addBtn.textContent = '✓';
+              addBtn.style.background = '#16a34a';
+            } catch(err) { console.error(err); }
+          }
         };
         addBtn.addEventListener('mousedown', doAdd);
         addBtn.addEventListener('touchend',  doAdd);
@@ -1166,33 +1184,21 @@
       fecharSugestoes();
     }
 
-    // Adiciona direto do card SEM fechar o overlay
-    async function adicionarDoCard(p, qtd, addBtnEl) {
-      try {
-        await push(ref(db, caminhoLista()), {
-          produto:    p.n,
-          quantidade: String(qtd),
-          categoria:  ($cat.value || '').trim(),
-          preco:      p.p || 0,
-          unidade:    p.u || '',
-          produtoId:  p.id ? String(p.id) : '',
-          riscado:    false,
-          foto:       p.img || p.i || null,
-          ts:         Date.now(),
-          deviceId
-        });
-        // Feedback visual: ✓ verde por 1 segundo
-        if (addBtnEl) {
-          addBtnEl.textContent = '✓';
-          addBtnEl.style.background = '#16a34a';
-          setTimeout(() => {
-            addBtnEl.textContent = '+';
-            addBtnEl.style.background = '';
-          }, 1000);
-        }
-      } catch (e) {
-        console.error('Erro ao adicionar do card:', e);
-      }
+    // Adiciona direto do card SEM fechar o overlay; retorna a chave Firebase
+    async function adicionarDoCard(p, qtd) {
+      const novoRef = await push(ref(db, caminhoLista()), {
+        produto:    p.n,
+        quantidade: String(qtd),
+        categoria:  ($cat.value || '').trim(),
+        preco:      p.p || 0,
+        unidade:    p.u || '',
+        produtoId:  p.id ? String(p.id) : '',
+        riscado:    false,
+        foto:       p.img || p.i || null,
+        ts:         Date.now(),
+        deviceId
+      });
+      return novoRef.key;
     }
 
     $produto.addEventListener('input', () => {
