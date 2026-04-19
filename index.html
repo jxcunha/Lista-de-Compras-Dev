@@ -131,67 +131,149 @@
       flex: 0 0 120px;
       width: 120px;
     }
+    /* ── Overlay de busca (grade de produtos) ── */
     .autocomplete-list{
       display: none;
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0;
-      right: 0;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: 0 12px 28px rgba(0,0,0,.14);
-      z-index: 500;
-      max-height: 260px;
+      z-index: 800;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .autocomplete-list.aberto{ display: block; }
-    .autocomplete-item{
-      padding: 10px 14px;
-      cursor: pointer;
-      font-size: 14px;
+
+    .ac-overlay-header{
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 10;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid #e5e7eb;
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 12px;
+    }
+    .ac-overlay-voltar{
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: #333;
+      padding: 0 4px;
+      line-height: 1;
+    }
+    .ac-overlay-termo{
+      font-size: 20px;
+      font-weight: 700;
+      color: #111;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-transform: lowercase;
+    }
+
+    /* Grade 3 colunas */
+    .ac-grid{
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       gap: 10px;
-      border-bottom: 1px solid #f3f4f6;
+      padding: 12px 10px 80px;
     }
-    .autocomplete-item:last-child{ border-bottom: none; }
-    .autocomplete-item:hover, .autocomplete-item.ativo{
-      background: #fff5f2;
-    }
-    .autocomplete-item .ac-thumb{
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      object-fit: contain;
-      background: #f9fafb;
-      border: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .autocomplete-item .ac-info{
+
+    /* Card de produto */
+    .autocomplete-item{
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      cursor: pointer;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      flex: 1;
-      gap: 2px;
-      min-width: 0;
+      -webkit-tap-highlight-color: transparent;
     }
-    .autocomplete-item .ac-nome{
-      font-weight: 600;
+    .autocomplete-item:active{
+      background: #fff5f2;
+    }
+    .ac-img-wrap{
+      position: relative;
+      aspect-ratio: 1 / 1;
+      background: #f9fafb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .ac-loja-badge{
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      backdrop-filter: blur(2px);
+      max-width: calc(100% - 10px);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .autocomplete-item .ac-marca{
-      color: var(--muted);
-      font-size: 12px;
+    /* Cor por loja */
+    .ac-loja-badge[data-loja="Atacadão"]{ background: rgba(220,38,38,0.80); }
+    .ac-loja-badge[data-loja="Mateus"]  { background: rgba(22,163,74,0.80); }
+    .ac-loja-badge[data-loja="Fribal"]  { background: rgba(37,99,235,0.80); }
+    .autocomplete-item .ac-thumb{
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 6px;
+    }
+    .ac-no-img{
+      font-size: 28px;
+      color: #d1d5db;
+    }
+    .ac-add-btn{
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 32px;
+      height: 32px;
+      background: #1a1a1a;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 300;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .ac-card-info{
+      padding: 6px 8px 8px;
     }
     .autocomplete-item .ac-preco{
-      color: var(--primary);
+      font-size: 12px;
       font-weight: 700;
-      white-space: nowrap;
-      font-size: 14px;
-      flex-shrink: 0;
+      color: #111;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .autocomplete-item .ac-nome{
+      font-size: 10px;
+      color: #6b7280;
+      text-transform: uppercase;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
     /* Campo de preço */
@@ -702,14 +784,26 @@
         produtosDB = data.produtos || [];
         eanIndex = {};
         for (const p of produtosDB) {
+          p.loja = 'Atacadão';          // marca a loja de origem
           if (p.ean) eanIndex[p.ean] = p;
         }
+
+        // Banco do Mateus Mais (se existir)
+        try {
+          const resMateus = await fetch('./produtos_v2.json?v=' + Date.now());
+          const dataMateus = await resMateus.json();
+          for (const p of (dataMateus.produtos || [])) {
+            p.loja = 'Mateus';          // marca a loja de origem
+            produtosDB.push(p);
+          }
+        } catch(e) { /* opcional */ }
 
         // Banco de notas fiscais (EAN-13 real)
         const resNotas = await fetch('./produtos_notas.json?v=' + Date.now());
         const dataNotas = await resNotas.json();
         eanNotasIndex = {};
         for (const p of (dataNotas.produtos || [])) {
+          if (!p.loja) p.loja = 'Outro'; // usa o campo loja do JSON (ex: "Fribal")
           if (p.ean) eanNotasIndex[p.ean] = p;
           // Adiciona ao autocomplete também
           produtosDB.push(p);
@@ -747,49 +841,91 @@
         $acList.classList.remove('aberto');
         return;
       }
-      resultados.forEach((p, i) => {
-        const div = document.createElement('div');
-        div.className = 'autocomplete-item';
-        div.dataset.index = i;
 
-        // Thumbnail
-        if (p.i) {
+      // Cabeçalho com botão voltar e termo pesquisado
+      const header = document.createElement('div');
+      header.className = 'ac-overlay-header';
+      const btnVoltar = document.createElement('button');
+      btnVoltar.className = 'ac-overlay-voltar';
+      btnVoltar.textContent = '←';
+      btnVoltar.addEventListener('mousedown', (e) => { e.preventDefault(); fecharSugestoes(); });
+      btnVoltar.addEventListener('touchend', (e) => { e.preventDefault(); fecharSugestoes(); });
+      const termo = document.createElement('span');
+      termo.className = 'ac-overlay-termo';
+      termo.textContent = $produto.value.trim();
+      header.appendChild(btnVoltar);
+      header.appendChild(termo);
+      $acList.appendChild(header);
+
+      // Grade de produtos
+      const grid = document.createElement('div');
+      grid.className = 'ac-grid';
+
+      resultados.forEach((p, i) => {
+        const card = document.createElement('div');
+        card.className = 'autocomplete-item';
+        card.dataset.index = i;
+
+        // Imagem
+        const imgWrap = document.createElement('div');
+        imgWrap.className = 'ac-img-wrap';
+        if (p.i || p.img) {
           const img = document.createElement('img');
           img.className = 'ac-thumb';
-          img.src = p.i;
+          img.src = p.i || p.img;
           img.alt = '';
-          img.onerror = () => { img.style.display = 'none'; };
-          div.appendChild(img);
+          img.onerror = () => {
+            img.style.display = 'none';
+            const icon = document.createElement('span');
+            icon.className = 'ac-no-img';
+            icon.textContent = '🛒';
+            imgWrap.appendChild(icon);
+          };
+          imgWrap.appendChild(img);
+        } else {
+          const icon = document.createElement('span');
+          icon.className = 'ac-no-img';
+          icon.textContent = '🛒';
+          imgWrap.appendChild(icon);
+        }
+        // Badge da loja (topo da imagem)
+        if (p.loja) {
+          const badge = document.createElement('span');
+          badge.className = 'ac-loja-badge';
+          badge.textContent = p.loja;
+          badge.dataset.loja = p.loja;
+          imgWrap.appendChild(badge);
         }
 
-        // Info (nome + marca)
-        const info = document.createElement('div');
-        info.className = 'ac-info';
-        const nome = document.createElement('span');
-        nome.className = 'ac-nome';
-        nome.textContent = p.n;
-        const marca = document.createElement('span');
-        marca.className = 'ac-marca';
-        marca.textContent = p.b || '';
-        info.appendChild(nome);
-        info.appendChild(marca);
-        div.appendChild(info);
+        // Botão +
+        const addBtn = document.createElement('div');
+        addBtn.className = 'ac-add-btn';
+        addBtn.textContent = '+';
+        imgWrap.appendChild(addBtn);
+        card.appendChild(imgWrap);
 
-        // Preço + unidade
+        // Preço e nome
+        const info = document.createElement('div');
+        info.className = 'ac-card-info';
         const preco = document.createElement('span');
         preco.className = 'ac-preco';
-        const precoTxt = p.p > 0 ? formatarPreco(p.p) : 'sem preço';
-        const unidTxt  = p.u ? ` / ${p.u}` : '';
+        const precoTxt = p.p > 0 ? formatarPreco(p.p) : '–';
+        const unidTxt  = p.u ? `/${p.u}` : '';
         preco.textContent = precoTxt + unidTxt;
-        div.appendChild(preco);
+        const nome = document.createElement('span');
+        nome.className = 'ac-nome';
+        nome.textContent = p.n + (p.b ? ` ${p.b}` : '');
+        info.appendChild(preco);
+        info.appendChild(nome);
+        card.appendChild(info);
 
-        div.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          selecionarProduto(p);
-        });
+        card.addEventListener('mousedown', (e) => { e.preventDefault(); selecionarProduto(p); });
+        card.addEventListener('touchend',  (e) => { e.preventDefault(); selecionarProduto(p); });
 
-        $acList.appendChild(div);
+        grid.appendChild(card);
       });
+
+      $acList.appendChild(grid);
       $acList.classList.add('aberto');
     }
 
@@ -819,22 +955,9 @@
     });
 
     $produto.addEventListener('keydown', (e) => {
-      const items = $acList.querySelectorAll('.autocomplete-item');
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        acAtivo = Math.min(acAtivo + 1, items.length - 1);
-        items.forEach((el, i) => el.classList.toggle('ativo', i === acAtivo));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        acAtivo = Math.max(acAtivo - 1, -1);
-        items.forEach((el, i) => el.classList.toggle('ativo', i === acAtivo));
-      } else if (e.key === 'Enter') {
-        if (acAtivo >= 0 && items[acAtivo]) {
-          items[acAtivo].dispatchEvent(new Event('mousedown'));
-        } else {
-          fecharSugestoes();
-          incluirItem();
-        }
+      if (e.key === 'Enter') {
+        fecharSugestoes();
+        incluirItem();
       } else if (e.key === 'Escape') {
         fecharSugestoes();
       }
