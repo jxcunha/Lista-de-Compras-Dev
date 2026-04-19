@@ -1412,7 +1412,7 @@
       $pdNome.textContent    = p.n + (p.b ? ` — ${p.b}` : '');
       $pdPreco.textContent   = p.p > 0 ? formatarPreco(p.p) + (p.u ? `/${p.u}` : '') : 'Sem preço';
       $pdUnidade.textContent = p.u ? `Unidade: ${p.u}` : '';
-      $pdEan.textContent     = p.ean ? `EAN: ${p.ean}` : '';
+      $pdEan.textContent     = (p.ean && String(p.ean).length === 13) ? `EAN: ${p.ean}` : '';
 
       // Qty
       $pdQtyVal.textContent = '1';
