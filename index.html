@@ -2026,26 +2026,34 @@
       $prod.disabled = false;
     }
 
+    // AbortSignal.timeout não existe em iOS < 16 — usa AbortController
+    function fetchComTimeout(url, opcoes, ms) {
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), ms);
+      return fetch(url, Object.assign({}, opcoes, { signal: ctrl.signal }))
+        .finally(() => clearTimeout(tid));
+    }
+
     // ── Cosmos Bluesoft API ────────────────────────────────────────────
     async function buscarNaCosmos(ean) {
       try {
-        const resp = await fetch(
+        const resp = await fetchComTimeout(
           'https://api.cosmos.bluesoft.com.br/gtins/' + ean + '.json',
           {
             headers: {
               'X-Cosmos-Token': COSMOS_TOKEN,
               'Content-Type': 'application/json',
               'User-Agent': 'Cosmos-API-Request'
-            },
-            signal: AbortSignal.timeout(8000)
-          }
+            }
+          },
+          8000
         );
         if (!resp.ok) return null;
         const data = await resp.json();
         if (!data || !data.description) return null;
 
         const nome  = data.description;
-        const marca = data.brand?.name || '';
+        const marca = data.brand && data.brand.name ? data.brand.name : '';
         const preco = data.avg_price || 0;
         // CDN do Cosmos exige autenticação — imagem virá do Open Food Facts
         const imagem = '';
@@ -2058,6 +2066,7 @@
         const nomeCompleto = nome + (marca && !nome.toUpperCase().includes(marca.toUpperCase()) ? ' - ' + marca : '');
         return { nome: nomeCompleto, imagem, unidade, preco, ean };
       } catch(e) {
+        console.warn('[Cosmos] erro:', e.message);
         return null;
       }
     }
@@ -2065,9 +2074,10 @@
     // ── Open Food Facts (fallback) ─────────────────────────────────────
     async function buscarDadosPorEAN(ean) {
       try {
-        const resp = await fetch(
+        const resp = await fetchComTimeout(
           'https://world.openfoodfacts.org/api/v0/product/' + ean + '.json',
-          { signal: AbortSignal.timeout(8000) }
+          {},
+          8000
         );
         const data = await resp.json();
         if (data.status === 1 && data.product) {
