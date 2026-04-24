@@ -1943,48 +1943,75 @@
       if (el) el.textContent = msg;
     }
 
+    // Token da API Cosmos Bluesoft (cosmos.bluesoft.com.br)
+    const COSMOS_TOKEN = 'vivY0Jx1HNVV20wxoL7q7A';
+
     async function processarEAN(ean) {
       const $prod = document.getElementById('produto');
       $prod.value = 'Buscando produto...';
       $prod.disabled = true;
 
       try {
-        const dadosAPI = await buscarDadosPorEAN(ean);
-
-        if (!dadosAPI) {
+        // 1. Notas fiscais (EAN-13 real — mais preciso)
+        const produtoNota = eanNotasIndex[ean];
+        if (produtoNota) {
+          selecionarProduto(produtoNota);
           $prod.disabled = false;
-          $prod.value = '';
-          $prod.placeholder = 'EAN ' + ean + ' nao encontrado';
-          setTimeout(() => { $prod.placeholder = 'Produto'; }, 3000);
           return;
         }
 
-        // 1. Busca nas notas fiscais (EAN-13 real — mais preciso)
-        const produtoNota = eanNotasIndex[ean];
+        // 2. Banco local Atacadão
+        const produtoLocal = eanIndex[ean];
+        if (produtoLocal) {
+          selecionarProduto(produtoLocal);
+          $prod.disabled = false;
+          return;
+        }
 
-        if (produtoNota) {
-          selecionarProduto(produtoNota);
-        } else {
-          // 2. Busca no banco do Atacadão pelo EAN interno
-          const produtoEAN = eanIndex[ean];
-          if (produtoEAN) {
-            selecionarProduto(produtoEAN);
+        // 3. Cosmos Bluesoft (banco brasileiro com EAN-13)
+        setScanStatus('Buscando na Cosmos...');
+        const dadosCosmos = await buscarNaCosmos(ean);
+        if (dadosCosmos) {
+          const produtoNome = buscarNoMateus(dadosCosmos.nome);
+          if (produtoNome) {
+            selecionarProduto(produtoNome);
           } else {
-            // 3. Tenta por nome
-            const produtoNome = buscarNoMateus(dadosAPI.nome);
-            if (produtoNome) {
-              selecionarProduto(produtoNome);
-            } else {
-              // 4. Usa dados da Open Food Facts
-              $prod.value = dadosAPI.nome;
-              imagemSelecionada = dadosAPI.imagem || '';
-              unidadeSelecionada = dadosAPI.unidade || '';
-              if (dadosAPI.preco > 0) {
-                document.getElementById('preco').value = dadosAPI.preco.toFixed(2);
-              }
+            $prod.value = dadosCosmos.nome;
+            unidadeSelecionada = dadosCosmos.unidade || '';
+            if (dadosCosmos.preco > 0) {
+              document.getElementById('preco').value = dadosCosmos.preco.toFixed(2);
+            }
+            // Tenta buscar imagem no Open Food Facts (CDN Cosmos exige auth)
+            const offDados = await buscarDadosPorEAN(ean);
+            imagemSelecionada = offDados?.imagem || '';
+          }
+          $prod.disabled = false;
+          return;
+        }
+
+        // 4. Fallback: Open Food Facts
+        setScanStatus('Buscando online...');
+        const dadosOFF = await buscarDadosPorEAN(ean);
+        if (dadosOFF) {
+          const produtoNome = buscarNoMateus(dadosOFF.nome);
+          if (produtoNome) {
+            selecionarProduto(produtoNome);
+          } else {
+            $prod.value = dadosOFF.nome;
+            imagemSelecionada = dadosOFF.imagem || '';
+            unidadeSelecionada = dadosOFF.unidade || '';
+            if (dadosOFF.preco > 0) {
+              document.getElementById('preco').value = dadosOFF.preco.toFixed(2);
             }
           }
+          $prod.disabled = false;
+          return;
         }
+
+        // 5. Nenhuma fonte encontrou
+        $prod.value = '';
+        $prod.placeholder = 'EAN ' + ean + ' não encontrado';
+        setTimeout(() => { $prod.placeholder = 'Produto'; }, 3000);
 
       } catch (e) {
         $prod.value = '';
@@ -1996,6 +2023,43 @@
       $prod.disabled = false;
     }
 
+    // ── Cosmos Bluesoft API ────────────────────────────────────────────
+    async function buscarNaCosmos(ean) {
+      try {
+        const resp = await fetch(
+          'https://api.cosmos.bluesoft.com.br/gtins/' + ean + '.json',
+          {
+            headers: {
+              'X-Cosmos-Token': COSMOS_TOKEN,
+              'Content-Type': 'application/json',
+              'User-Agent': 'Cosmos-API-Request'
+            },
+            signal: AbortSignal.timeout(8000)
+          }
+        );
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        if (!data || !data.description) return null;
+
+        const nome  = data.description;
+        const marca = data.brand?.name || '';
+        const preco = data.avg_price || 0;
+        // CDN do Cosmos exige autenticação — imagem virá do Open Food Facts
+        const imagem = '';
+
+        // Extrai unidade da descrição (ex: "AÇÚCAR 1KG" → "1kg")
+        let unidade = '';
+        const mU = nome.match(/(\d+)\s*(G|KG|ML|L|LT)\b/i);
+        if (mU) unidade = mU[1] + mU[2].toLowerCase();
+
+        const nomeCompleto = nome + (marca && !nome.toUpperCase().includes(marca.toUpperCase()) ? ' - ' + marca : '');
+        return { nome: nomeCompleto, imagem, unidade, preco, ean };
+      } catch(e) {
+        return null;
+      }
+    }
+
+    // ── Open Food Facts (fallback) ─────────────────────────────────────
     async function buscarDadosPorEAN(ean) {
       try {
         const resp = await fetch(
@@ -2008,10 +2072,8 @@
           const nome = p.product_name_pt || p.product_name || p.generic_name_pt || p.generic_name || null;
           if (!nome) return null;
 
-          // Pega imagem do produto se disponível
           const imagem = p.image_front_small_url || p.image_small_url || p.image_url || '';
 
-          // Tenta extrair quantidade/unidade
           let unidade = '';
           if (p.quantity) {
             const match = p.quantity.match(/(\d+)\s*(g|kg|ml|l|un)/i);
