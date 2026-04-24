@@ -1305,7 +1305,7 @@
       overlayInput.addEventListener('input', () => {
         $produto.value = overlayInput.value;
         const novos = buscarProdutos(overlayInput.value.trim());
-        if (novos.length === 0) { fecharSugestoes(); return; }
+        if (novos.length === 0) { fecharSugestoes(false); return; }  // não limpa enquanto o usuário digita
         renderGrid(novos);
       });
 
@@ -1346,9 +1346,9 @@
       });
     }
 
-    function fecharSugestoes() {
+    function fecharSugestoes(limparCampo = true) {
       _overlayInput = null;
-      $produto.value = '';   // limpa o campo ao voltar
+      if (limparCampo) $produto.value = '';   // limpa o campo ao voltar (não ao selecionar)
       $acList.classList.remove('aberto');
       $acList.innerHTML = '';
       acAtivo = -1;
@@ -1466,7 +1466,7 @@
       imagemSelecionada    = p.img || p.i || '';
       unidadeSelecionada   = p.u || '';
       produtoIdSelecionado = p.id ? String(p.id) : '';
-      fecharSugestoes();
+      fecharSugestoes(false);  // não limpa: o nome do produto acabou de ser definido
     }
 
     // Adiciona direto do card SEM fechar o overlay; retorna a chave Firebase
@@ -1494,10 +1494,10 @@
 
     $produto.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        fecharSugestoes();
+        fecharSugestoes(false);  // não limpa: usuário confirma o produto
         incluirItem();
       } else if (e.key === 'Escape') {
-        fecharSugestoes();
+        fecharSugestoes(true);   // Escape → limpa tudo
       }
     });
 
