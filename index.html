@@ -1917,6 +1917,8 @@
         async (result, err) => {
           if (result) {
             const ean = result.getText();
+            setScanStatus('✓ EAN: ' + ean);
+            await new Promise(r => setTimeout(r, 1500));
             fecharScanner();
             await processarEAN(ean);
           }
@@ -1948,6 +1950,7 @@
 
     async function processarEAN(ean) {
       const $prod = document.getElementById('produto');
+      console.log('[SCAN] EAN lido:', ean, '| tamanho:', ean.length);
       $prod.value = 'Buscando produto...';
       $prod.disabled = true;
 
