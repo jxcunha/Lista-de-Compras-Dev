@@ -1,60 +1,38 @@
 {
   "produtos": [
-    {
-      "ean": "7891089100025",
-      "n": "Azeitona La Viole",
-      "b": "",
-      "p": 13.90,
-      "loja": "Fribal",
-      "data": "2026-04-04"
-    },
-    {
-      "ean": "7898598810223",
-      "n": "Tomate Seco Tozzi",
-      "b": "Tozzi",
-      "p": 10.90,
-      "loja": "Fribal",
-      "data": "2026-04-04"
-    },
-    {
-      "ean": "7896074601068",
-      "n": "Pão de Queijo Forno de Minas",
-      "b": "Forno de Minas",
-      "p": 19.90,
-      "loja": "Fribal",
-      "data": "2026-04-04"
-    },
-    {
-      "ean": "7894904555659",
-      "n": "Salame Italiano Seara",
-      "b": "Seara",
-      "p": 15.90,
-      "loja": "Fribal",
-      "data": "2026-04-04"
-    },
-    {
-      "ean": "7898205924909",
-      "n": "Queijo Mussarela Verde Campo",
-      "b": "Verde Campo",
-      "p": 17.90,
-      "loja": "Fribal",
-      "data": "2026-04-04"
-    },
-    {
-      "ean": "7898552260286",
-      "n": "Papel Manteiga Royalpack",
-      "b": "Royalpack",
-      "p": 4.75,
-      "loja": "Fribal",
-      "data": "2026-04-04"
-    },
-    {
-      "ean": "0000078936683",
-      "n": "Cerveja Heineken",
-      "b": "Heineken",
-      "p": 7.49,
-      "loja": "Fribal",
-      "data": "2026-04-04"
-    }
+    { "ean": "7891089100025", "n": "Azeitona La Viole", "b": "", "p": 13.90, "u": "un", "loja": "Fribal", "data": "2026-04-04" },
+    { "ean": "7898598810223", "n": "Tomate Seco Tozzi", "b": "Tozzi", "p": 10.90, "u": "un", "loja": "Fribal", "data": "2026-04-04" },
+    { "ean": "7896074601068", "n": "Pão de Queijo Forno de Minas", "b": "Forno de Minas", "p": 19.90, "u": "un", "loja": "Fribal", "data": "2026-04-04" },
+    { "ean": "7894904555659", "n": "Salame Italiano Seara", "b": "Seara", "p": 15.90, "u": "un", "loja": "Fribal", "data": "2026-04-04" },
+    { "ean": "7898205924909", "n": "Queijo Mussarela Verde Campo", "b": "Verde Campo", "p": 17.90, "u": "un", "loja": "Fribal", "data": "2026-04-04" },
+    { "ean": "7898552260286", "n": "Papel Manteiga Royalpack", "b": "Royalpack", "p": 4.75, "u": "un", "loja": "Fribal", "data": "2026-04-04" },
+    { "ean": "0000078936683", "n": "Cerveja Heineken", "b": "Heineken", "p": 7.49, "u": "un", "loja": "Fribal", "data": "2026-04-04" },
+
+    { "ean": "7798159947989", "n": "Vinho Cordero Piel Lobo", "b": "Cordero Piel Lobo", "p": 49.90, "u": "un", "loja": "Fribal", "data": "2026-04-19" },
+    { "ean": "7898205920239", "n": "Queijo Cottage LA", "b": "", "p": 13.90, "u": "un", "loja": "Fribal", "data": "2026-04-19" },
+    { "ean": "7891089450687", "n": "Azeitona La Viole Preta", "b": "La Viole", "p": 25.00, "u": "un", "loja": "Fribal", "data": "2026-04-19" },
+    { "n": "Queijo Mussarela Lacfree", "b": "", "p": 87.00, "u": "kg", "loja": "Fribal", "data": "2026-04-19" },
+    { "n": "Ancho Grill", "b": "", "p": 79.99, "u": "kg", "loja": "Fribal", "data": "2026-04-19" },
+    { "n": "Carne de Sol Alcatra", "b": "", "p": 61.99, "u": "kg", "loja": "Fribal", "data": "2026-04-19" },
+    { "n": "Queijo Ricota Búfala Bom Destino", "b": "Bom Destino", "p": 49.90, "u": "kg", "loja": "Fribal", "data": "2026-04-19" },
+
+    { "ean": "7891991295109", "n": "Cerveja Stella Artois", "b": "Stella Artois", "p": 11.90, "u": "un", "loja": "Fribal", "data": "2026-04-26" },
+    { "n": "Carne Moída Light", "b": "", "p": 65.99, "u": "kg", "loja": "Fribal", "data": "2026-04-26" },
+    { "n": "Ancho Selection", "b": "", "p": 86.99, "u": "kg", "loja": "Fribal", "data": "2026-04-26" },
+    { "n": "Peito de Frango Sem Pele", "b": "", "p": 25.99, "u": "kg", "loja": "Fribal", "data": "2026-04-26" },
+    { "n": "Sobrecoxa de Frango", "b": "", "p": 18.99, "u": "kg", "loja": "Fribal", "data": "2026-04-26" },
+
+    { "ean": "7897042701834", "n": "Biscoito Nazin Polvilho", "b": "Nazin", "p": 6.90, "u": "un", "loja": "Fribal", "data": "2026-04-28" },
+    { "ean": "7898959224876", "n": "Molho de Tomate Legurme", "b": "Legurme", "p": 15.90, "u": "un", "loja": "Fribal", "data": "2026-04-28" },
+    { "n": "Mamão Formosa", "b": "", "p": 11.50, "u": "kg", "loja": "Fribal", "data": "2026-04-28" },
+    { "n": "Alface Crespa Higienizada", "b": "", "p": 49.90, "u": "kg", "loja": "Fribal", "data": "2026-04-28" },
+    { "n": "Cheiro Verde", "b": "", "p": 4.10, "u": "un", "loja": "Fribal", "data": "2026-04-28" },
+    { "n": "Banana Prata", "b": "", "p": 8.90, "u": "kg", "loja": "Fribal", "data": "2026-04-28" },
+    { "n": "Bolo de Tapioca", "b": "", "p": 65.00, "u": "kg", "loja": "Fribal", "data": "2026-04-28" },
+    { "n": "Pão Francês", "b": "", "p": 22.80, "u": "kg", "loja": "Fribal", "data": "2026-04-28" },
+
+    { "ean": "7798159948856", "n": "Vinho La Muerta Cordero Piel Lobo 750ml", "b": "Cordero Piel Lobo", "p": 58.00, "u": "un", "loja": "Fribal", "data": "2026-05-03" },
+    { "ean": "7896398010556", "n": "Cerveja Cerpa Export Long Neck 350ml", "b": "Cerpa", "p": 6.99, "u": "un", "loja": "Fribal", "data": "2026-05-03" },
+    { "ean": "7893500020110", "n": "Arroz Branco Tio João", "b": "Tio João", "p": 7.50, "u": "un", "loja": "Fribal", "data": "2026-05-03" }
   ]
 }
