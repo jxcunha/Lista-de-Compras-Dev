@@ -276,6 +276,28 @@
       color: #111;
     }
 
+    /* Card "Incluir como novo produto" - destacado em laranja */
+    .autocomplete-item.ac-card-novo{
+      border: 2px dashed var(--primary);
+      background: #fff7ed;
+    }
+    .ac-card-novo .ac-img-wrap{
+      background: #ffedd5;
+    }
+    .ac-card-novo .ac-novo-icon{
+      font-size: 38px;
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .ac-card-novo .ac-nome{
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .ac-card-novo .ac-preco{
+      color: #9a3412;
+      font-size: 11px;
+    }
+
     /* Card do mais barato no grupo fica com borda verde */
     .autocomplete-item.ac-melhor-preco{
       border: 2px solid #16a34a;
@@ -1107,6 +1129,111 @@
 
     let _overlayInput = null; // referência ao input dentro do overlay
 
+    // Cria card especial "Incluir como produto novo" com o termo digitado
+    function criarCardNovoProduto(termo) {
+      // Produto fantasma usado pra adicionar à lista
+      const pNovo = {
+        n: termo,
+        b: '',
+        p: 0,
+        u: '',
+        i: '',
+        img: '',
+        loja: '',
+        ean: ''
+      };
+
+      let cardQtd = 1;
+      let _itemKey = null;
+      let _touchMoved = false;
+
+      const card = document.createElement('div');
+      card.className = 'autocomplete-item ac-card-novo';
+
+      const imgWrap = document.createElement('div');
+      imgWrap.className = 'ac-img-wrap';
+      const icon = document.createElement('span');
+      icon.className = 'ac-novo-icon';
+      icon.textContent = '+';
+      imgWrap.appendChild(icon);
+
+      card.addEventListener('touchstart', () => { _touchMoved = false; }, { passive: true });
+      card.addEventListener('touchmove',  () => { _touchMoved = true;  }, { passive: true });
+
+      // Botão + para adicionar à lista
+      const addBtn = document.createElement('div');
+      addBtn.className = 'ac-add-btn';
+      addBtn.textContent = '+';
+
+      const doAdd = async (e) => {
+        if (_touchMoved) return;
+        e.preventDefault(); e.stopPropagation();
+        if (_itemKey) {
+          try { await remove(ref(db, `${caminhoLista()}/${_itemKey}`)); } catch(err) { console.error(err); }
+          _itemKey = null;
+          addBtn.textContent = '+';
+          addBtn.style.background = '';
+        } else {
+          try {
+            _itemKey = await adicionarDoCard(pNovo, cardQtd);
+            addBtn.textContent = '✓';
+            addBtn.style.background = '#16a34a';
+          } catch(err) { console.error(err); }
+        }
+      };
+      addBtn.addEventListener('mousedown', doAdd);
+      addBtn.addEventListener('touchend',  doAdd);
+      imgWrap.appendChild(addBtn);
+      card.appendChild(imgWrap);
+
+      // Info: texto + qty
+      const info = document.createElement('div');
+      info.className = 'ac-card-info';
+      const preco = document.createElement('span');
+      preco.className = 'ac-preco';
+      preco.textContent = 'novo produto';
+      const nome = document.createElement('span');
+      nome.className = 'ac-nome';
+      nome.textContent = termo;
+      info.appendChild(preco);
+      info.appendChild(nome);
+
+      // Controle de quantidade [−] [N] [+]
+      const qtyRow = document.createElement('div');
+      qtyRow.className = 'ac-qty-row';
+      const btnMinus = document.createElement('button');
+      btnMinus.className = 'ac-qty-btn';
+      btnMinus.textContent = '−';
+      const qtyVal = document.createElement('span');
+      qtyVal.className = 'ac-qty-val';
+      qtyVal.textContent = '1';
+      const btnPlus = document.createElement('button');
+      btnPlus.className = 'ac-qty-btn';
+      btnPlus.textContent = '+';
+      const atualizar = () => { qtyVal.textContent = cardQtd; };
+      const decrementa = (e) => {
+        if (_touchMoved) return;
+        e.preventDefault(); e.stopPropagation();
+        if (cardQtd > 1) { cardQtd--; atualizar(); }
+      };
+      const incrementa = (e) => {
+        if (_touchMoved) return;
+        e.preventDefault(); e.stopPropagation();
+        cardQtd++; atualizar();
+      };
+      btnMinus.addEventListener('mousedown', decrementa);
+      btnMinus.addEventListener('touchend',  decrementa);
+      btnPlus.addEventListener('mousedown',  incrementa);
+      btnPlus.addEventListener('touchend',   incrementa);
+      qtyRow.appendChild(btnMinus);
+      qtyRow.appendChild(qtyVal);
+      qtyRow.appendChild(btnPlus);
+      info.appendChild(qtyRow);
+      card.appendChild(info);
+
+      return card;
+    }
+
     function renderGrid(resultados) {
       // Remove grid anterior se existir
       const gridAntigo = $acList.querySelector('.ac-grid');
@@ -1114,6 +1241,13 @@
 
       const grid = document.createElement('div');
       grid.className = 'ac-grid';
+
+      // Card "Incluir como produto novo" - sempre no topo se tiver termo digitado
+      const termoAtual = (_overlayInput?.value || $produto.value || '').trim();
+      if (termoAtual.length >= 2) {
+        grid.appendChild(criarCardNovoProduto(termoAtual));
+      }
+
       let grupoAtual = null;
       let primeiroDoGrupo = true;
 
