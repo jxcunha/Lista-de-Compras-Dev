@@ -62,6 +62,17 @@
     { "n": "Tangerina Ponkan", "b": "", "p": 14.90, "u": "kg", "loja": "Fribal", "data": "2026-04-29" },
     { "n": "Ata", "b": "", "p": 32.90, "u": "kg", "loja": "Fribal", "data": "2026-04-29" },
 
+    { "ean": "7896013100461", "n": "Água Sanitária Olimpo 1L", "b": "Olimpo", "p": 2.49, "u": "un", "loja": "Mateus", "data": "2026-05-12" },
+    { "ean": "7896221600159", "n": "Água Sanitária Clorito 1L", "b": "Clorito", "p": 1.99, "u": "un", "loja": "Mateus", "data": "2026-05-12" },
+    { "ean": "7891022639001", "n": "Detergente Limpol Maçã 500ml", "b": "Limpol", "p": 2.59, "u": "un", "loja": "Mateus", "data": "2026-05-12" },
+    { "ean": "7897664130029", "n": "Detergente Minuano Limão 500ml", "b": "Minuano", "p": 2.49, "u": "un", "loja": "Mateus", "data": "2026-05-12" },
+    { "ean": "7897664130302", "n": "Detergente Minuano Coco 500ml", "b": "Minuano", "p": 2.49, "u": "un", "loja": "Mateus", "data": "2026-05-12" },
+    { "ean": "7897664130036", "n": "Detergente Minuano Neutro 500ml", "b": "Minuano", "p": 2.49, "u": "un", "loja": "Mateus", "data": "2026-05-12" },
+    { "ean": "4006000172828", "n": "Sabonete Nivea Vegetal Manteiga de Karité Pérsia", "b": "Nivea", "p": 4.85, "u": "un", "loja": "Mateus", "data": "2026-05-12" },
+    { "ean": "4005900807854", "n": "Sabonete Nivea Box Pure Milk Sensitive", "b": "Nivea", "p": 4.69, "u": "un", "loja": "Mateus", "data": "2026-05-12" },
+    { "ean": "7896001045149", "n": "Esponja Bettanin Brilhus Multi-Uso 4x1", "b": "Bettanin", "p": 4.69, "u": "un", "loja": "Mateus", "data": "2026-05-12" },
+    { "ean": "4005900294722", "n": "Sabonete Nivea Box Creme Care 90g", "b": "Nivea", "p": 4.69, "u": "un", "loja": "Mateus", "data": "2026-05-12" },
+
     { "ean": "7898002470104", "n": "Geleia Hometrade Frutas Vermelhas Premium", "b": "Hometrade", "p": 29.90, "u": "un", "loja": "Mateus", "data": "2026-05-04" },
     { "ean": "7897269900355", "n": "Páprica Doce Cia das Ervas 23g", "b": "Cia das Ervas", "p": 14.39, "u": "un", "loja": "Mateus", "data": "2026-05-04" },
     { "ean": "7897269900010", "n": "Açafrão Cia das Ervas 1g", "b": "Cia das Ervas", "p": 13.89, "u": "un", "loja": "Mateus", "data": "2026-05-04" },
