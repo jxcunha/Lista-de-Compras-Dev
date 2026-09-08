@@ -1,4 +1,4 @@
-name: Atualiza precos do Mateus
+name: Atualiza precos
 
 on:
   schedule:
@@ -28,21 +28,38 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Atualiza o catalogo
+      - name: Atualiza o catalogo do Mateus
         run: python atualizar_precos.py
+
+      # continue-on-error: uma loja fora do ar nao pode impedir que a
+      # outra seja atualizada e commitada
+      - name: Atualiza o catalogo do Atacadao
+        continue-on-error: true
+        run: python atualizar_atacadao.py
 
       - name: Commita se houve mudanca
         run: |
-          if git diff --quiet -- produtos_v2.json; then
-            echo "Nenhuma mudanca no catalogo - nada a commitar."
+          if git diff --quiet -- produtos_v2.json produtos_atacadao.json; then
+            echo "Nenhuma mudanca nos catalogos - nada a commitar."
             exit 0
           fi
 
-          total=$(python -c "import json;print(len(json.load(open('produtos_v2.json',encoding='utf-8'))['produtos']))")
+          conta() {
+            python -c "import json;print(len(json.load(open('$1',encoding='utf-8'))['produtos']))"
+          }
           hoje=$(TZ=America/Sao_Paulo date +%d/%m/%Y)
+
+          partes=""
+          if ! git diff --quiet -- produtos_v2.json; then
+            partes="Mateus $(conta produtos_v2.json)"
+          fi
+          if ! git diff --quiet -- produtos_atacadao.json; then
+            [ -n "$partes" ] && partes="$partes, "
+            partes="${partes}Atacadao $(conta produtos_atacadao.json)"
+          fi
 
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add produtos_v2.json
-          git commit -m "Atualiza catalogo Mateus Cohama: ${total} produtos (${hoje})"
+          git add produtos_v2.json produtos_atacadao.json
+          git commit -m "Atualiza catalogos: ${partes} produtos (${hoje})"
           git push
