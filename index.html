@@ -1092,6 +1092,16 @@
       }
     }
 
+    // Identifica "o mesmo produto" entre lojas. Cada loja batiza do seu
+    // jeito — o Omo 800g é "Sabão em Pó Omo" no Mateus e "Lava Roupas em
+    // Pó Omo" no Atacadão —, então o nome não serve para casar os dois.
+    // O código de barras serve, e ainda separa tamanhos diferentes, que o
+    // nome normalizado juntava (o de 400g aparecia como "mais barato" que
+    // o de 800g só por ser menor).
+    function chaveProduto(p) {
+      return p.ean ? 'ean:' + p.ean : 'nome:' + normalizarNome(p.n);
+    }
+
     // Normaliza nome: minúsculo, sem acento, sem tamanhos (330ml, 1kg...)
     function normalizarNome(nome) {
       return nome.toLowerCase()
@@ -1103,13 +1113,19 @@
 
     function buscarProdutos(termo) {
       if (!termo || termo.length < 2) return [];
-      const t = termo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+      // Casa palavra a palavra, em qualquer ordem. Antes era um unico
+      // includes() do termo inteiro, entao "sabao omo" nao achava nada:
+      // no nome real existe "em po" entre as duas palavras.
+      const palavras = norm(termo).split(/\s+/).filter(Boolean);
+      if (!palavras.length) return [];
 
       // Coleta até 20 resultados por loja para garantir representação de todas
       const porLoja = {};
       for (const p of produtosDB) {
-        if (!norm(p.n).includes(t)) continue;
+        const nome = norm(p.n);
+        if (!palavras.every((w) => nome.includes(w))) continue;
         const loja = p.loja || 'Outro';
         if (!porLoja[loja]) porLoja[loja] = [];
         if (porLoja[loja].length < 20) porLoja[loja].push(p);
@@ -1121,7 +1137,7 @@
       // Agrupa por nome normalizado e ordena grupo por preço (menor primeiro)
       const grupos = new Map();
       for (const p of todos) {
-        const chave = normalizarNome(p.n);
+        const chave = chaveProduto(p);
         if (!grupos.has(chave)) grupos.set(chave, []);
         grupos.get(chave).push(p);
       }
@@ -1268,7 +1284,7 @@
       // Com grupoUnico as ofertas sao do mesmo codigo de barras: os nomes
       // diferem entre as lojas, entao todas contam como um grupo so para
       // o selo "mais barato" aparecer na mais barata.
-      const chaveDe = (x) => grupoUnico ? '_mesmo_ean_' : normalizarNome(x.n);
+      const chaveDe = (x) => grupoUnico ? '_mesmo_ean_' : chaveProduto(x);
 
       resultados.forEach((p, i) => {
         const chaveGrupo = chaveDe(p);
