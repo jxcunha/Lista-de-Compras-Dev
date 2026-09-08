@@ -1036,8 +1036,15 @@
     let acAtivo = -1;
 
     // Índice EAN → produto para busca rápida pelo scanner
-    let eanIndex = {};       // EAN → produto (Atacadão)
-    let eanNotasIndex = {};  // EAN → produto (notas fiscais - EAN real)
+    let eanIndex = {};       // EAN → [produtos de todas as lojas]
+
+    // O mesmo código de barras existe em mais de uma loja. O índice guarda
+    // todas as ofertas para o scanner poder mostrá-las lado a lado.
+    function indexarPorEan(p) {
+      if (!p.ean) return;
+      if (!eanIndex[p.ean]) eanIndex[p.ean] = [];
+      eanIndex[p.ean].push(p);
+    }
 
     async function carregarProdutos() {
       try {
@@ -1048,7 +1055,7 @@
         eanIndex = {};
         for (const p of produtosDB) {
           p.loja = 'Atacadão';          // marca a loja de origem
-          if (p.ean) eanIndex[p.ean] = p;
+          indexarPorEan(p);
         }
 
         // Banco do Mateus Mais (se existir)
@@ -1058,21 +1065,21 @@
           for (const p of (dataMateus.produtos || [])) {
             p.loja = 'Mateus';          // marca a loja de origem
             produtosDB.push(p);
+            indexarPorEan(p);           // faltava: a câmera não via o Mateus
           }
         } catch(e) { /* opcional */ }
 
         // Banco de notas fiscais (EAN-13 real)
         const resNotas = await fetch('./produtos_notas.json?v=' + Date.now());
         const dataNotas = await resNotas.json();
-        eanNotasIndex = {};
         for (const p of (dataNotas.produtos || [])) {
           if (!p.loja) p.loja = 'Outro'; // usa o campo loja do JSON (ex: "Fribal")
-          if (p.ean) eanNotasIndex[p.ean] = p;
+          indexarPorEan(p);
           // Adiciona ao autocomplete também
           produtosDB.push(p);
         }
 
-        console.log(`Produtos Atacadão: ${produtosDB.length - Object.keys(eanNotasIndex).length} | Notas fiscais: ${Object.keys(eanNotasIndex).length}`);
+        console.log(`Catálogos: ${produtosDB.length} produtos | ${Object.keys(eanIndex).length} códigos de barras no scanner`);
       } catch(e) {
         console.warn('Não foi possível carregar produtos:', e.message);
       }
@@ -1234,7 +1241,7 @@
       return card;
     }
 
-    function renderGrid(resultados) {
+    function renderGrid(resultados, grupoUnico = false) {
       // Remove grid anterior se existir
       const gridAntigo = $acList.querySelector('.ac-grid');
       if (gridAntigo) gridAntigo.remove();
@@ -1244,19 +1251,24 @@
 
       // Card "Incluir como produto novo" - sempre no topo se tiver termo digitado
       const termoAtual = (_overlayInput?.value || $produto.value || '').trim();
-      if (termoAtual.length >= 2) {
+      if (!grupoUnico && termoAtual.length >= 2) {
         grid.appendChild(criarCardNovoProduto(termoAtual));
       }
 
       let grupoAtual = null;
       let primeiroDoGrupo = true;
 
+      // Com grupoUnico as ofertas sao do mesmo codigo de barras: os nomes
+      // diferem entre as lojas, entao todas contam como um grupo so para
+      // o selo "mais barato" aparecer na mais barata.
+      const chaveDe = (x) => grupoUnico ? '_mesmo_ean_' : normalizarNome(x.n);
+
       resultados.forEach((p, i) => {
-        const chaveGrupo = normalizarNome(p.n);
+        const chaveGrupo = chaveDe(p);
         const novoGrupo  = chaveGrupo !== grupoAtual;
         if (novoGrupo) { grupoAtual = chaveGrupo; primeiroDoGrupo = true; }
 
-        const grupoTemVarios = resultados.filter(x => normalizarNome(x.n) === chaveGrupo).length > 1;
+        const grupoTemVarios = resultados.filter(x => chaveDe(x) === chaveGrupo).length > 1;
         const eMaisBarato    = primeiroDoGrupo && grupoTemVarios && p.p > 0;
 
         // Quantidade local deste card (começa em 1)
@@ -1401,7 +1413,7 @@
       $acList.appendChild(grid);
     }
 
-    function mostrarSugestoes(resultados) {
+    function mostrarSugestoes(resultados, grupoUnico = false) {
       if (resultados.length === 0) {
         $acList.classList.remove('aberto');
         return;
@@ -1409,7 +1421,7 @@
 
       // Se o overlay já está aberto, só atualiza a grade
       if ($acList.classList.contains('aberto')) {
-        renderGrid(resultados);
+        renderGrid(resultados, grupoUnico);
         return;
       }
 
@@ -1469,7 +1481,7 @@
       header.appendChild(btnLimpar);
       $acList.appendChild(header);
 
-      renderGrid(resultados);
+      renderGrid(resultados, grupoUnico);
       $acList.classList.add('aberto');
 
       // Foca o input do overlay e posiciona cursor no fim do texto
@@ -1999,27 +2011,26 @@
     });
 
     async function decodificarImagem(file) {
-      return new Promise((resolve) => {
+      // decodeFromCanvas não existe no ZXing 0.19 — a chamada lançava
+      // TypeError, que o catch engolia, e a leitura por foto (o fallback
+      // do iOS) devolvia null sempre. O método correto é o
+      // decodeFromImageElement, que é assíncrono.
+      const url = URL.createObjectURL(file);
+      try {
         const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width  = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          URL.revokeObjectURL(url);
-          try {
-            const reader = new ZXing.BrowserMultiFormatReader();
-            const result = reader.decodeFromCanvas(canvas);
-            resolve(result ? result.getText() : null);
-          } catch(e) {
-            resolve(null);
-          }
-        };
-        img.onerror = () => resolve(null);
         img.src = url;
-      });
+        await img.decode();
+        const hints = new Map();
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        const leitor = new ZXing.BrowserMultiFormatReader(hints);
+        const resultado = await leitor.decodeFromImageElement(img);
+        return resultado ? resultado.getText() : null;
+      } catch(e) {
+        console.warn('[SCAN] não decodificou a foto:', e?.name || e);
+        return null;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
     }
 
     document.getElementById('btnScan').addEventListener('click', abrirScanner);
@@ -2089,19 +2100,23 @@
       $prod.disabled = true;
 
       try {
-        // 1. Notas fiscais (EAN-13 real — mais preciso)
-        const produtoNota = eanNotasIndex[ean];
-        if (produtoNota) {
-          selecionarProduto(produtoNota);
+        // 1. Catálogos locais: notas fiscais, Mateus e Atacadão.
+        // O mesmo código de barras costuma existir em mais de uma loja,
+        // então listamos todas as ofertas da mais barata para a mais cara
+        // e deixamos a escolha com quem está no corredor do mercado.
+        const ofertas = (eanIndex[ean] || []).slice()
+          .sort((a, b) => (a.p || 9999) - (b.p || 9999));
+
+        if (ofertas.length === 1) {
+          selecionarProduto(ofertas[0]);
           $prod.disabled = false;
           return;
         }
 
-        // 2. Banco local Atacadão
-        const produtoLocal = eanIndex[ean];
-        if (produtoLocal) {
-          selecionarProduto(produtoLocal);
+        if (ofertas.length > 1) {
+          $prod.value = ofertas[0].n;
           $prod.disabled = false;
+          mostrarSugestoes(ofertas, true);
           return;
         }
 
