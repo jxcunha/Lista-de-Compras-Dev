@@ -634,6 +634,12 @@
       color: #fff;
       font-size: 16px;
       font-weight: 600;
+      margin: 0 0 4px;
+    }
+    .scanner-dica{
+      color: rgba(255,255,255,.72);
+      font-size: 13px;
+      line-height: 1.35;
       margin: 0 0 14px;
     }
     .scanner-video-wrap{
@@ -964,6 +970,7 @@
   <div id="scannerModal" class="scanner-overlay">
     <div class="scanner-box">
       <p class="scanner-titulo" id="scannerTitulo">Aponte para o código de barras</p>
+      <p class="scanner-dica">Código pequeno? Afaste um pouco — de muito perto a câmera não foca.</p>
       <div class="scanner-video-wrap">
         <video id="scannerVideo" playsinline></video>
         <div class="scanner-mira"></div>
@@ -2066,15 +2073,37 @@
         return;
       }
 
-      codeReader = new ZXing.BrowserMultiFormatReader();
+      // Só os formatos que aparecem em produto de supermercado. Sem essa
+      // restrição o leitor testa os 17 que a biblioteca conhece (QR,
+      // Aztec, PDF417, DataMatrix...) em cada quadro, gastando tempo com
+      // formatos que nunca vão aparecer numa gôndola.
+      const hints = new Map();
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+        ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.UPC_A,  ZXing.BarcodeFormat.UPC_E,
+        ZXing.BarcodeFormat.ITF,    ZXing.BarcodeFormat.CODE_128
+      ]);
+      codeReader = new ZXing.BrowserMultiFormatReader(hints);
+
+      // Resolução alta e foco contínuo. Código pequeno (lata de leite,
+      // saquinho de tempero) obriga a aproximar o celular, e aí a câmera
+      // passa da distância mínima de foco e a imagem borra. Com mais
+      // pixels dá para ler de longe o bastante para a câmera focar.
       codeReader.decodeFromConstraints(
-        { video: { facingMode: { ideal: 'environment' } } },
+        {
+          video: {
+            facingMode: { ideal: 'environment' },
+            width:  { ideal: 1920 },
+            height: { ideal: 1080 },
+            advanced: [{ focusMode: 'continuous' }]
+          }
+        },
         'scannerVideo',
         async (result, err) => {
           if (result) {
             const ean = result.getText();
             setScanStatus('✓ EAN: ' + ean);
-            await new Promise(r => setTimeout(r, 1500));
+            await new Promise(r => setTimeout(r, 400));
             fecharScanner();
             await processarEAN(ean);
           }
