@@ -32,7 +32,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // ── Cache ──────────────────────────────────────────────────────
-const CACHE_NAME = 'lista-compras-cache-v13';
+const CACHE_NAME = 'lista-compras-cache-v14';
 const URLS_TO_CACHE = ['./Carrinho.png', './manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -53,11 +53,18 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   // Não cachear Firebase/Google
   if (req.url.includes('firebase') || req.url.includes('googleapis') || req.url.includes('gstatic')) return;
-  // Network-first para HTML e JSON (sempre busca versão nova)
-  const url = req.url;
-  if (url.endsWith('.html') || url.includes('index') || url.includes('.json') || url === location.origin + '/') {
+  // Network-first para a página e os catálogos (sempre a versão nova).
+  //
+  // A checagem anterior era por URL e não cobria o endereço do GitHub
+  // Pages (.../Lista-de-Compras-Dev/): não termina em .html, não contém
+  // "index" nem ".json", e não é igual a origin + "/". Com isso a página
+  // caía no cache-first abaixo e o app ficava preso numa versão antiga
+  // do index.html, mesmo recebendo preços novos. Usar req.mode cobre a
+  // navegação em qualquer caminho.
+  if (req.mode === 'navigate' || req.destination === 'document' ||
+      req.url.includes('.json')) {
     event.respondWith(
-      fetch(req).catch(() => caches.match(req))
+      fetch(req).catch(() => caches.match(req).then((c) => c || caches.match('./')))
     );
     return;
   }
