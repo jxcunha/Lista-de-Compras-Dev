@@ -1,0 +1,48 @@
+name: Atualiza precos do Mateus
+
+on:
+  schedule:
+    # Quinta-feira, 03:00 em Brasilia (UTC-3) = 06:00 UTC
+    - cron: "0 6 * * 4"
+  workflow_dispatch:        # permite rodar na mao pela aba Actions
+
+# Necessario para o passo de commit escrever no repositorio
+permissions:
+  contents: write
+
+concurrency:
+  group: atualiza-precos
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Baixa o repositorio
+        uses: actions/checkout@v4
+
+      - name: Prepara o Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Atualiza o catalogo
+        run: python atualizar_precos.py
+
+      - name: Commita se houve mudanca
+        run: |
+          if git diff --quiet -- produtos_v2.json; then
+            echo "Nenhuma mudanca no catalogo - nada a commitar."
+            exit 0
+          fi
+
+          total=$(python -c "import json;print(len(json.load(open('produtos_v2.json',encoding='utf-8'))['produtos']))")
+          hoje=$(TZ=America/Sao_Paulo date +%d/%m/%Y)
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add produtos_v2.json
+          git commit -m "Atualiza catalogo Mateus Cohama: ${total} produtos (${hoje})"
+          git push
