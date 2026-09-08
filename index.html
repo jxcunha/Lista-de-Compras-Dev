@@ -2035,6 +2035,17 @@
 
     document.getElementById('btnScan').addEventListener('click', abrirScanner);
 
+    // A cada quadro sem código legível o ZXing "falha" — é o fluxo normal
+    // de quem está mirando a câmera. Comparar err.name com a string
+    // 'NotFoundException' não funciona: a build minificada renomeia as
+    // classes (NotFoundException vira "R"), então a comparação dava sempre
+    // verdadeira e o app exibia "Erro ao ler câmera" o tempo todo. Com
+    // instanceof os nomes minificados deixam de importar.
+    function leituraNormal(err) {
+      return ['NotFoundException', 'ChecksumException', 'FormatException']
+        .some((c) => ZXing[c] && err instanceof ZXing[c]);
+    }
+
     function abrirScanner() {
       // Verifica se mediaDevices está disponível (HTTPS ou localhost)
       const temCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
@@ -2067,7 +2078,7 @@
             fecharScanner();
             await processarEAN(ean);
           }
-          if (err && err.name !== 'NotFoundException') {
+          if (err && !leituraNormal(err)) {
             setScanStatus('Erro ao ler câmera');
           } else if (!result) {
             setScanStatus('Procurando código de barras...');
