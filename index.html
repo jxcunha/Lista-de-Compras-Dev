@@ -1055,8 +1055,15 @@
 
     async function carregarProdutos() {
       try {
+        // Os catálogos são pedidos sem carimbo de tempo na URL. Antes
+        // havia um "?v=" + Date.now(), que dava um endereço novo a cada
+        // abertura: o celular nunca reconhecia o arquivo e rebaixava os
+        // 6,6 MB inteiros toda vez, mesmo o catálogo só mudando uma vez
+        // por semana. Sem o carimbo, o GitHub Pages responde 304 e zero
+        // byte quando nada mudou, e manda o arquivo quando mudou.
+
         // Banco do Atacadão (autocomplete)
-        const res = await fetch('./produtos_atacadao.json?v=' + Date.now());
+        const res = await fetch('./produtos_atacadao.json');
         const data = await res.json();
         produtosDB = data.produtos || [];
         eanIndex = {};
@@ -1067,7 +1074,7 @@
 
         // Banco do Mateus Mais (se existir)
         try {
-          const resMateus = await fetch('./produtos_v2.json?v=' + Date.now());
+          const resMateus = await fetch('./produtos_v2.json');
           const dataMateus = await resMateus.json();
           for (const p of (dataMateus.produtos || [])) {
             p.loja = 'Mateus';          // marca a loja de origem
@@ -1077,7 +1084,7 @@
         } catch(e) { /* opcional */ }
 
         // Banco de notas fiscais (EAN-13 real)
-        const resNotas = await fetch('./produtos_notas.json?v=' + Date.now());
+        const resNotas = await fetch('./produtos_notas.json');
         const dataNotas = await resNotas.json();
         for (const p of (dataNotas.produtos || [])) {
           if (!p.loja) p.loja = 'Outro'; // usa o campo loja do JSON (ex: "Fribal")
