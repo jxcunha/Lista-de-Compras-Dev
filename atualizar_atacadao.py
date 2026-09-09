@@ -37,11 +37,19 @@ except (AttributeError, OSError):
 BASE = "https://www.atacadao.com.br/api/catalog_system/pub"
 POR_PAGINA = 50            # maximo aceito pela VTEX
 TETO_VTEX = 2500           # a partir daqui a API devolve HTTP 400
-# Canal 1: e o preco que o site mostra ao consumidor e que se paga no
-# caixa (conferido em produto real: R$ 17,49 no site = sc=1). O canal 2
-# devolve precos 12-17% menores que nao correspondem nem ao unitario nem
-# ao desconto por quantidade - outro canal de venda, fora do nosso caso.
-CANAL = 1
+# A busca de catalogo so devolve preco "nacional": ela ignora regionId e
+# sellerId. O preco real da loja so sai da simulacao de carrinho, por SKU.
+# Por isso a enumeracao varre os dois canais (para achar o maximo de
+# candidatos) e o preco vem depois, da loja de verdade.
+CANAIS = (1, 2)
+
+# Atacadao de Sao Luis/MA, obtido do CEP 65074390 (Cohama) em
+# /api/checkout/pub/regions. E a loja onde a compra acontece.
+SELLER = "atacadaobr747"
+SIMULACAO = ("https://www.atacadao.com.br"
+             "/api/checkout/pub/orderForms/simulation?sc=1")
+POR_SIMULACAO = 50         # itens por chamada de simulacao
+PAUSA_SIMULACAO = 1.0      # a API devolve 500 se consultarmos rapido demais
 PAUSA = 0.4                # segundos entre requisicoes
 TENTATIVAS = 3
 TIMEOUT = 45
@@ -66,7 +74,7 @@ DEPARTAMENTOS = {
 }
 
 
-def filtro(trilha, de=0, ate=1):
+def filtro(trilha, canal, de=0, ate=1):
     """Monta a consulta: categoria pelo caminho + so o que esta a venda.
 
     Sem o filtro de disponibilidade a VTEX devolve o catalogo inteiro,
@@ -79,7 +87,7 @@ def filtro(trilha, de=0, ate=1):
     """
     caminho = "C:/" + "/".join(trilha) + "/"
     return (f"/products/search?fq={caminho}"
-            f"&fq=isAvailablePerSalesChannel_{CANAL}:1&sc={CANAL}"
+            f"&fq=isAvailablePerSalesChannel_{canal}:1&sc={canal}"
             f"&_from={de}&_to={ate}")
 
 
@@ -113,9 +121,9 @@ def buscar(caminho, so_cabecalho=False):
     raise RuntimeError(f"{caminho} falhou apos {TENTATIVAS} tentativas: {ultimo}")
 
 
-def contar(trilha):
+def contar(trilha, canal):
     """Quantos produtos a venda a categoria tem, sem baixar nenhum."""
-    return buscar(filtro(trilha), so_cabecalho=True)
+    return buscar(filtro(trilha, canal), so_cabecalho=True)
 
 
 # ── Conversao para o formato do app ───────────────────────────────────────
@@ -189,20 +197,16 @@ def preco_do_item(oferta, item):
 def converter(produto):
     """Produto da VTEX -> registro enxuto usado pelo index.html.
 
-    Devolve None quando o produto nao tem oferta valida (sem preco ou
-    sem vendedor), para nao poluir o catalogo com item nao compravel.
+    O preco NAO vem daqui. A busca de catalogo devolve um preco nacional
+    que costuma diferir do cobrado na loja - e as vezes o produto nem e
+    vendido la. Guardamos o SKU em `_sku` e o preco real e preenchido
+    depois, por simulacao contra a loja de Sao Luis.
     """
     itens = produto.get("items") or []
     if not itens:
         return None
     item = itens[0]
-
-    vendedores = item.get("sellers") or []
-    if not vendedores:
-        return None
-    oferta = vendedores[0].get("commertialOffer") or {}
-    preco = preco_do_item(oferta, item)
-    if preco is None:
+    if not item.get("itemId"):
         return None
 
     # EAN opcional: sem ele o produto so nao entra no indice do scanner,
@@ -226,22 +230,114 @@ def converter(produto):
         "ean":  ean,
         "n":    produto.get("productName") or "",
         "b":    produto.get("brand") or "",
-        "p":    float(preco),
+        "p":    0.0,                      # preenchido pela simulacao
         "d":    dep,
         "s":    sec,
         "i":    img_peq,
         "img":  img_grande,
         "u":    formatar_unidade(item),
+        "_sku": str(item["itemId"]),      # so para simular; sai antes de gravar
+        "_mult": float(item.get("unitMultiplier") or 1),
     }
 
 
+# ── Preco real da loja ────────────────────────────────────────────────────
+def simular(itens):
+    """Pergunta o preco de ate POR_SIMULACAO SKUs na loja de Sao Luis.
+
+    A busca de catalogo ignora regionId e sellerId e sempre responde com
+    um preco nacional. Quem sabe o preco (e se o produto existe) na loja
+    e a simulacao de carrinho, que aceita varios SKUs de uma vez.
+    """
+    corpo = json.dumps({
+        "items": [{"id": sku, "quantity": 1, "seller": SELLER} for sku in itens],
+        "country": "BRA",
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        SIMULACAO,
+        data=corpo,
+        headers={"Content-Type": "application/json",
+                 "Accept": "application/json",
+                 "User-Agent": UA},
+    )
+    for tentativa in range(1, TENTATIVAS + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+                return json.load(resp).get("items") or []
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+            if tentativa < TENTATIVAS:
+                time.sleep(tentativa * 6)
+    return None          # quem chamou decide: divide o lote ou desiste dele
+
+
+def precos_da_loja(produtos):
+    """Troca o preco nacional pelo da loja e descarta o que ela nao vende."""
+    print(f"\nConsultando preco na loja ({SELLER}) para "
+          f"{len(produtos)} produtos...", flush=True)
+
+    aprovados = []
+    perdidos = 0
+
+    def processar(lote):
+        """Aplica o preco de um lote; se a API falhar, divide e tenta de novo.
+
+        Um unico SKU problematico faz a chamada inteira responder 500. Com a
+        falha propagando, a execucao inteira era descartada depois de
+        milhares de consultas ja feitas. Dividindo o lote, o estrago fica
+        restrito ao item ruim.
+        """
+        nonlocal perdidos
+        resposta = simular([x["_sku"] for x in lote])
+
+        if resposta is None or len(resposta) != len(lote):
+            if len(lote) == 1:
+                perdidos += 1        # SKU que a API se recusa a cotar
+                return
+            meio = len(lote) // 2
+            time.sleep(PAUSA_SIMULACAO)
+            processar(lote[:meio])
+            time.sleep(PAUSA_SIMULACAO)
+            processar(lote[meio:])
+            return
+
+        # a simulacao responde na mesma ordem em que os itens foram enviados
+        for produto, item in zip(lote, resposta):
+            if item.get("availability") != "available":
+                continue
+            centavos = item.get("sellingPrice") or 0
+            if centavos <= 0:
+                continue
+            # mesma regra do catalogo: o preco cotado e por unidade de
+            # medida, entao granel precisa multiplicar pela porcao
+            produto["p"] = round(centavos / 100 * produto["_mult"], 2)
+            aprovados.append(produto)
+
+    for inicio in range(0, len(produtos), POR_SIMULACAO):
+        processar(produtos[inicio:inicio + POR_SIMULACAO])
+        print(f"  {min(inicio + POR_SIMULACAO, len(produtos))}/{len(produtos)}"
+              f" - {len(aprovados)} vendidos na loja", end="\r", flush=True)
+        time.sleep(PAUSA_SIMULACAO)
+
+    if perdidos:
+        print(f"  {perdidos} SKUs a API nao cotou (ignorados)" + " " * 15,
+              flush=True)
+
+    print(f"  {len(aprovados)} de {len(produtos)} sao vendidos na loja"
+          + " " * 20, flush=True)
+
+    for produto in aprovados:            # campos de trabalho saem do arquivo
+        produto.pop("_sku", None)
+        produto.pop("_mult", None)
+    return aprovados
+
+
 # ── Varredura do catalogo ─────────────────────────────────────────────────
-def paginar(trilha, vistos, produtos):
+def paginar(trilha, canal, vistos, produtos):
     """Baixa uma categoria inteira, ja convertendo e filtrando."""
     de = 0
     while de < TETO_VTEX:
         ate = min(de + POR_PAGINA - 1, TETO_VTEX - 1)
-        lote = buscar(filtro(trilha, de, ate))
+        lote = buscar(filtro(trilha, canal, de, ate))
         if not lote:
             return
         for bruto in lote:
@@ -258,7 +354,7 @@ def paginar(trilha, vistos, produtos):
         time.sleep(PAUSA)
 
 
-def coletar(nos, vistos, produtos, caminho=(), nivel=0):
+def coletar(nos, canal, vistos, produtos, caminho=(), nivel=0):
     """Percorre a arvore, descendo so nas categorias grandes demais.
 
     A VTEX so aceita subcategoria pelo caminho inteiro ("C:/2/18/");
@@ -274,18 +370,18 @@ def coletar(nos, vistos, produtos, caminho=(), nivel=0):
         recuo = "  " * nivel
         trilha = caminho + (str(cid),)
 
-        total = contar(trilha)
+        total = contar(trilha, canal)
         if not total:
             continue
 
         if total > TETO_VTEX and filhos:
             print(f"{recuo}  {nome}: {total} a venda, "
                   f"descendo em {len(filhos)} subcategorias", flush=True)
-            coletar(filhos, vistos, produtos, trilha, nivel + 1)
+            coletar(filhos, canal, vistos, produtos, trilha, nivel + 1)
             continue
 
         antes = len(produtos)
-        paginar(trilha, vistos, produtos)
+        paginar(trilha, canal, vistos, produtos)
         print(f"{recuo}  {nome}: {total} a venda -> +{len(produtos) - antes} "
               f"(acumulado {len(produtos)})", flush=True)
         time.sleep(PAUSA)
@@ -300,13 +396,17 @@ def baixar_catalogo():
     print(f"  {len(mercado)} departamentos de mercado", flush=True)
     print(f"  fora: {', '.join(fora)}", flush=True)
 
-    print("", flush=True)
+    # Varre os dois canais so para levantar candidatos - quem decide o
+    # que entra e por quanto e a simulacao na loja, logo abaixo.
     vistos, produtos = set(), []
-    coletar(mercado, vistos, produtos)
+    for canal in CANAIS:
+        antes = len(produtos)
+        print(chr(10) + f"--- Canal {canal} " + "-" * 34, flush=True)
+        coletar(mercado, canal, vistos, produtos)
+        print(f"  canal {canal}: +{len(produtos) - antes} candidatos", flush=True)
 
-    print(f"\n  {len(produtos)} produtos aproveitados "
-          f"de {len(vistos)} vistos", flush=True)
-    return produtos
+    print(f"  {len(produtos)} candidatos de {len(vistos)} vistos", flush=True)
+    return precos_da_loja(produtos)
 
 
 # ── Comparacao com o catalogo atual ───────────────────────────────────────

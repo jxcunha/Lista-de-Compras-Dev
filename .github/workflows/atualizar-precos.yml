@@ -17,7 +17,9 @@ concurrency:
 jobs:
   atualizar:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # O Atacadao consulta o preco de ~10 mil SKUs na loja, um lote por
+    # segundo: leva uns 15 minutos. A folga evita cortar no meio.
+    timeout-minutes: 45
 
     steps:
       - name: Baixa o repositorio
